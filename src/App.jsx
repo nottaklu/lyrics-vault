@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Library, Plus, Music, Search as SearchIcon, Database as DbIcon, Edit2, Trash2 } from 'lucide-react';
+import { Library, Plus, Music, Search as SearchIcon, Database as DbIcon, Edit2, Trash2, GripVertical } from 'lucide-react';
 import SongCard from './components/SongCard';
 import SongModal from './components/SongModal';
 import SongForm from './components/SongForm';
-import PinOverlay from './components/PinOverlay';
 import { db } from './db';
 import './App.css';
 
@@ -29,19 +28,17 @@ function App() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingSong, setEditingSong] = useState(null);
   const [activeTab, setActiveTab] = useState('library');
-  
-  // PIN Logic - Volatile session based
-  const [isPinVerified, setIsPinVerified] = useState(false);
-  const [showPinOverlay, setShowPinOverlay] = useState(false);
-  const [pendingTab, setPendingTab] = useState(null);
 
   const loadSongs = async () => {
     const all = await db.songs.toArray();
-    if (all.length === 0) {
-      await db.songs.bulkAdd(DEFAULT_SONGS);
+    // Sort by order
+    const sorted = all.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    if (sorted.length === 0) {
+      const initial = DEFAULT_SONGS.map((s, i) => ({ ...s, order: i }));
+      await db.songs.bulkAdd(initial);
       setSongs(await db.songs.toArray());
     } else {
-      setSongs(all);
+      setSongs(sorted);
     }
   };
 
@@ -49,47 +46,13 @@ function App() {
     loadSongs();
   }, []);
 
-  useEffect(() => {
-    if (showPinOverlay || showAddForm || selectedSong) {
-      document.body.classList.add('lock-scroll');
-    } else {
-      document.body.classList.remove('lock-scroll');
-    }
-  }, [showPinOverlay, showAddForm, selectedSong]);
-
-  const handleTabSwitch = (tab) => {
-    if (tab === 'library') {
-      setIsPinVerified(false); // Reset on library exit
-      setActiveTab(tab);
-      setShowAddForm(false);
-    } else if (isPinVerified) {
-      setActiveTab(tab);
-      setShowAddForm(tab === 'add');
-    } else {
-      setPendingTab(tab);
-      setShowPinOverlay(true);
-    }
-  };
-
-  const onPinVerify = () => {
-    setIsPinVerified(true);
-    setShowPinOverlay(false);
-    if (pendingTab === 'add') {
-      setEditingSong(null);
-      setShowAddForm(true);
-      setActiveTab('add');
-    } else if (pendingTab === 'database') {
-      setActiveTab('database');
-      setShowAddForm(false);
-    }
-    setPendingTab(null);
-  };
-
   const handleSaveSong = async (data) => {
     if (editingSong) {
       await db.songs.update(editingSong.id, data);
     } else {
-      await db.songs.add(data);
+      const all = await db.songs.toArray();
+      const nextOrder = all.length > 0 ? Math.max(...all.map(s => s.order || 0)) + 1 : 0;
+      await db.songs.add({ ...data, order: nextOrder });
     }
     await loadSongs();
     setShowAddForm(false);
@@ -104,10 +67,36 @@ function App() {
     }
   };
 
+  const handleDragStart = (e, index) => {
+    e.dataTransfer.setData('index', index);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (e, targetIndex) => {
+    const sourceIndex = parseInt(e.dataTransfer.getData('index'));
+    if (sourceIndex === targetIndex) return;
+
+    const newSongs = [...songs];
+    const [movedSong] = newSongs.splice(sourceIndex, 1);
+    newSongs.splice(targetIndex, 0, movedSong);
+
+    // Update orders in DB
+    const updates = newSongs.map((s, i) => ({
+      key: s.id,
+      changes: { order: i }
+    }));
+
+    await Promise.all(updates.map(u => db.songs.update(u.key, u.changes)));
+    setSongs(newSongs);
+  };
+
   const filtered = songs.filter(s => 
     s.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
     (s.keywords && s.keywords.some(k => k.toLowerCase().includes(searchQuery.toLowerCase())))
-  );
+  ).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   return (
     <div className="app-container">
@@ -139,23 +128,30 @@ function App() {
 
         {activeTab === 'database' && (
           <div className="database-view fade-in">
-            <div className="song-grid">
-              {songs.map(s => (
-                <div key={s.id} className="song-card" onClick={() => setSelectedSong(s)}>
-                  <div className="card-header">
-                    <span className="song-card-scale">{s.scale}</span>
+            <div className="db-list">
+              {songs.map((s, index) => (
+                <div 
+                  key={s.id} 
+                  className="db-item"
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, index)}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, index)}
+                >
+                  <div className="db-item-content">
+                    <div className="drag-handle">
+                      <GripVertical size={18} />
+                    </div>
+                    <div className="db-info">
+                      <h3>{s.title}</h3>
+                      <span>{s.scale}</span>
+                    </div>
                   </div>
-                  <h3>{s.title}</h3>
-                  <div className="tag-row">
-                    {s.keywords?.map((k, i) => (
-                      <span key={i} className="song-tag">{k}</span>
-                    ))}
-                  </div>
-                  <div className="db-card-actions">
-                    <button className="action-btn" onClick={(e) => { e.stopPropagation(); setEditingSong(s); setShowAddForm(true); }}>
+                  <div className="db-item-actions">
+                    <button className="icon-btn edit-btn" onClick={() => { setEditingSong(s); setShowAddForm(true); }}>
                       <Edit2 size={16} />
                     </button>
-                    <button className="action-btn del" onClick={(e) => { e.stopPropagation(); deleteSong(s.id); }}>
+                    <button className="icon-btn delete-btn" onClick={() => deleteSong(s.id)}>
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -168,21 +164,17 @@ function App() {
 
       <nav className="floating-dock-container">
         <div className="floating-dock">
-          <button className={`dock-item ${activeTab === 'library' ? 'active' : ''}`} onClick={() => handleTabSwitch('library')}>
+          <button className={`dock-item ${activeTab === 'library' ? 'active' : ''}`} onClick={() => { setActiveTab('library'); setShowAddForm(false); }}>
             <Library size={20} />
           </button>
-          <button className={`dock-item ${activeTab === 'add' ? 'active' : ''}`} onClick={() => handleTabSwitch('add')}>
+          <button className="dock-item" onClick={() => { setEditingSong(null); setShowAddForm(true); }}>
             <Plus size={20} />
           </button>
-          <button className={`dock-item ${activeTab === 'database' ? 'active' : ''}`} onClick={() => handleTabSwitch('database')}>
+          <button className={`dock-item ${activeTab === 'database' ? 'active' : ''}`} onClick={() => { setActiveTab('database'); setShowAddForm(false); }}>
             <DbIcon size={20} />
           </button>
         </div>
       </nav>
-
-      {showPinOverlay && (
-        <PinOverlay onVerify={onPinVerify} onCancel={() => setShowPinOverlay(false)} />
-      )}
 
       {showAddForm && (
         <SongForm 

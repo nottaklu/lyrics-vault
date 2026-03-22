@@ -23,7 +23,7 @@ body {
 }
 
 .app-container {
-    width: 100%; max-width: 440px; height: 100vh; background: var(--bg); position: relative;
+    width: 100%; max-width: 440px; height: 100vh; height: 100dvh; background: var(--bg); position: relative;
     display: flex; flex-direction: column; overflow: hidden; animation: fadeIn 0.4s ease;
 }
 
@@ -34,7 +34,6 @@ body {
 /* Header */
 .app-header { padding: 50px 24px 10px; display: flex; justify-content: space-between; align-items: center; }
 .app-header h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.03em; margin: 0; }
-.header-logo { width: 32px; height: 32px; border-radius: 8px; object-fit: cover; }
 
 .content-area { flex: 1; padding: 10px 20px 140px; overflow-y: auto; scrollbar-width: none; }
 .content-area::-webkit-scrollbar { display: none; }
@@ -65,9 +64,13 @@ body {
 /* Database View */
 .db-list { display: flex; flex-direction: column; gap: 12px; }
 .db-item {
-    background: var(--glass); border: 1px solid var(--border); padding: 16px 20px; border-radius: 20px;
+    background: var(--glass); border: 1px solid var(--border); padding: 12px 16px; border-radius: 20px;
     display: flex; justify-content: space-between; align-items: center;
 }
+.db-item.dragging { opacity: 0.5; border: 1px dashed var(--accent); }
+.drag-handle { cursor: grab; color: var(--text-dim); padding-right: 12px; display: flex; align-items: center; }
+.drag-handle:active { cursor: grabbing; }
+.db-item-content { display: flex; align-items: center; gap: 4px; flex: 1; }
 .db-info h3 { font-size: 17px; font-weight: 600; margin: 0; }
 .db-info span { font-size: 12px; color: var(--accent); font-weight: 500; }
 
@@ -86,67 +89,41 @@ body {
 .floating-dock {
     pointer-events: auto; background: rgba(28, 28, 30, 0.85); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
     padding: 6px; border-radius: 40px; display: flex; gap: 4px; border: 1px solid var(--border); box-shadow: 0 10px 40px rgba(0,0,0,0.6);
-    height: 60px; min-width: 160px; justify-content: center; align-items: center;
-    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-    will-change: transform;
+    height: 60px; width: fit-content; min-width: 180px; justify-content: center; align-items: center;
 }
-
 .dock-item {
     padding: 12px; width: 48px; height: 48px; border-radius: 24px; color: var(--text-dim); background: transparent; border: none;
-    cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
     flex-shrink: 0;
 }
+.dock-item.active { background: rgba(255, 255, 255, 0.1); color: var(--accent); transform: scale(1.1); }
+.dock-item:active { transform: scale(0.9); }
 
-/* Premium UI Restoration */
-.app-header { padding: 60px 24px 10px; }
-.app-header h1 { font-family: 'Outfit', sans-serif; font-size: 38px; font-weight: 700; letter-spacing: -0.04em; }
-
-.song-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; animation: fadeIn 0.4s ease; }
-.song-card {
-    background: var(--glass); border: 1px solid var(--border); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border-radius: 28px; padding: 22px; min-height: 180px; display: flex; flex-direction: column; justify-content: space-between;
-    transition: all 0.3s cubic-bezier(0.32, 0.72, 0, 1); cursor: pointer; position: relative; overflow: hidden;
+/* Modals */
+.modal-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 2000; display: flex; justify-content: center; align-items: flex-end;
 }
-.song-card:active { transform: scale(0.96); background: rgba(255, 255, 255, 0.12); }
-
-.card-header { display: flex; justify-content: space-between; align-items: flex-start; }
-.song-card-scale { font-weight: 700; font-size: 13px; color: var(--accent); letter-spacing: 0.02em; }
-.song-card h3 { font-size: 20px; font-weight: 700; line-height: 1.25; margin-top: 4px; letter-spacing: -0.02em; }
-.tag-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
-.song-tag { background: rgba(255,255,255,0.06); padding: 5px 10px; border-radius: 12px; font-size: 11px; color: var(--text-dim); font-weight: 500; }
-
-.db-card-actions { 
-    position: absolute; bottom: 12px; right: 12px; display: flex; gap: 8px; opacity: 0; transition: opacity 0.2s;
+.modal-content {
+    width: 100%; height: 92%; background: #000; border-top-left-radius: 32px; border-top-right-radius: 32px;
+    display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border); animation: slideInUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
 }
-.song-card:hover .db-card-actions, .song-card:active .db-card-actions { opacity: 1; }
-.action-btn { width: 34px; height: 34px; border-radius: 17px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; border: none; color: white; cursor: pointer; backdrop-filter: blur(5px); }
-.action-btn.del { color: #FF3B30; }
+.modal-header { padding: 30px 24px 20px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border); }
+.modal-close-btn { background: var(--glass); border: none; color: white; width: 40px; height: 40px; border-radius: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.modal-body { flex: 1; padding: 30px 24px; overflow-y: auto; }
 
-/* PIN Overlay Restoration */
-.pin-overlay {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
-    z-index: 5000; display: flex; justify-content: center; align-items: center;
-    animation: fadeIn 0.4s ease;
+.lyrics-text { font-family: 'Fira Code', monospace; font-size: 16px; line-height: 1.8; color: #ccc; white-space: pre-wrap; margin: 0; }
+
+.form-group { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
+.form-group label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.1em; }
+.form-group input, .form-group textarea {
+    background: var(--glass); border: 1px solid var(--border); border-radius: 12px; padding: 14px; color: white; font-size: 16px; outline: none; font-family: inherit;
 }
-.pin-content {
-    background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border);
-    padding: 40px 24px; border-radius: 40px; width: 90%; max-width: 340px; text-align: center;
-    display: flex; flex-direction: column; gap: 24px;
+.form-group textarea { height: 200px; font-family: 'Fira Code', monospace; resize: none; }
+
+.save-btn { 
+    background: var(--accent); color: white; padding: 18px; border-radius: 16px; border: none; 
+    font-weight: 700; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;
 }
-.pin-dots { display: flex; justify-content: center; gap: 16px; margin-bottom: 30px; }
-.pin-dot { width: 14px; height: 14px; border-radius: 7px; background: rgba(255, 255, 255, 0.1); border: 1px solid var(--border); transition: all 0.2s cubic-bezier(0.32, 0.72, 0, 1); }
-.pin-dot.active { background: var(--accent); box-shadow: 0 0 15px var(--accent); transform: scale(1.3); }
-.pin-dot.error { background: #FF3B30; animation: shake 0.4s; }
 
-.runic-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; padding: 0 10px; }
-.runic-btn {
-    background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border);
-    color: #fff; font-size: 26px; border-radius: 18px; padding: 18px 0; cursor: pointer;
-    transition: all 0.1s; display: flex; align-items: center; justify-content: center;
-}
-.runic-btn:active { background: rgba(255,255,255,0.1); transform: scale(0.9); }
-
-.dystopian-text { font-family: 'Outfit', sans-serif; letter-spacing: 0.15em; font-weight: 800; font-size: 16px; color: var(--text-dim); }
-
-.lock-scroll { overflow: hidden !important; height: 100vh !important; position: fixed; width: 100%; }
+.fade-in { animation: fadeIn 0.4s ease; }
