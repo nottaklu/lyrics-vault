@@ -114,22 +114,29 @@ body {
 .pin-header h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
 .pin-header p { font-size: 14px; color: var(--text-dim); line-height: 1.5; }
 
-.pin-input-container { display: flex; justify-content: center; gap: 16px; }
+.pin-dots { display: flex; justify-content: center; gap: 12px; height: 14px; margin-bottom: 30px; }
 .pin-dot { 
-    width: 14px; height: 14px; border-radius: 50%; 
+    width: 12px; height: 12px; border-radius: 50%; 
     background: rgba(255, 255, 255, 0.1); border: 1px solid var(--border);
-    transition: all 0.2s;
+    transition: all 0.2s cubic-bezier(0.32, 0.72, 0, 1);
 }
-.pin-dot.active { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+.pin-dot.active { background: var(--accent); box-shadow: 0 0 15px var(--accent); transform: scale(1.2); }
 .pin-dot.error { background: #FF453A; animation: shake 0.4s; }
 
-.hidden-pin-input {
-    position: absolute; opacity: 0; pointer-events: none;
+.runic-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    margin-top: 10px;
 }
 
-.pin-cancel-btn {
-    background: transparent; border: none; color: var(--text-dim); font-size: 14px; font-weight: 600; cursor: pointer;
+.runic-btn {
+    background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border);
+    color: var(--text); font-size: 24px; border-radius: 12px; padding: 15px 0;
+    cursor: pointer; transition: all 0.1s; display: flex; align-items: center; justify-content: center;
 }
+.runic-btn:active { background: rgba(255, 255, 255, 0.15); transform: scale(0.92); }
+.runic-btn.backspace { color: var(--text-dim); }
+
+.dystopian-text { letter-spacing: 0.15em; font-weight: 800; }
 
 .lock-scroll { overflow: hidden !important; height: 100vh !important; }
 

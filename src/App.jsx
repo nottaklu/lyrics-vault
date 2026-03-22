@@ -30,21 +30,12 @@ function App() {
   const [editingSong, setEditingSong] = useState(null);
   const [activeTab, setActiveTab] = useState('library');
   
-  // PIN Logic
-  const [isPinVerified, setIsPinVerified] = useState(() => 
-    localStorage.getItem('isPinVerified') === 'true'
-  );
+  // PIN Logic - Volatile session based
+  const [isPinVerified, setIsPinVerified] = useState(false);
   const [showPinOverlay, setShowPinOverlay] = useState(false);
+  const [pendingTab, setPendingTab] = useState(null);
 
-  const loadSongs = async () => {
-    const all = await db.songs.toArray();
-    if (all.length === 0) {
-      await db.songs.bulkAdd(DEFAULT_SONGS);
-      setSongs(await db.songs.toArray());
-    } else {
-      setSongs(all);
-    }
-  };
+  const loadSongs = async () => { ... } // (loading logic)
 
   useEffect(() => {
     loadSongs();
@@ -58,23 +49,32 @@ function App() {
     }
   }, [showPinOverlay, showAddForm, selectedSong]);
 
-  const handleAddClick = () => {
-    if (isPinVerified) {
-      setEditingSong(null);
-      setShowAddForm(true);
-      setActiveTab('add');
+  const handleTabSwitch = (tab) => {
+    if (tab === 'library') {
+      setIsPinVerified(false); // Reset on library exit
+      setActiveTab(tab);
+      setShowAddForm(false);
+    } else if (isPinVerified) {
+      setActiveTab(tab);
+      setShowAddForm(tab === 'add');
     } else {
+      setPendingTab(tab);
       setShowPinOverlay(true);
     }
   };
 
   const onPinVerify = () => {
-    localStorage.setItem('isPinVerified', 'true');
     setIsPinVerified(true);
     setShowPinOverlay(false);
-    setEditingSong(null);
-    setShowAddForm(true);
-    setActiveTab('add');
+    if (pendingTab === 'add') {
+      setEditingSong(null);
+      setShowAddForm(true);
+      setActiveTab('add');
+    } else if (pendingTab === 'database') {
+      setActiveTab('database');
+      setShowAddForm(false);
+    }
+    setPendingTab(null);
   };
 
   const handleSaveSong = async (data) => {
@@ -105,7 +105,6 @@ function App() {
     <div className="app-container">
       <header className="app-header">
         <h1>{activeTab === 'database' ? 'Database' : 'Lyrics'}</h1>
-        <img src="/logo.png" alt="Logo" className="header-logo" />
       </header>
 
       <main className="content-area">
@@ -156,13 +155,13 @@ function App() {
 
       <nav className="floating-dock-container">
         <div className="floating-dock">
-          <button className={`dock-item ${activeTab === 'library' ? 'active' : ''}`} onClick={() => { setActiveTab('library'); setShowAddForm(false); }}>
+          <button className={`dock-item ${activeTab === 'library' ? 'active' : ''}`} onClick={() => handleTabSwitch('library')}>
             <Library size={20} />
           </button>
-          <button className={`dock-item ${activeTab === 'add' ? 'active' : ''}`} onClick={handleAddClick}>
+          <button className={`dock-item ${activeTab === 'add' ? 'active' : ''}`} onClick={() => handleTabSwitch('add')}>
             <Plus size={20} />
           </button>
-          <button className={`dock-item ${activeTab === 'database' ? 'active' : ''}`} onClick={() => { setActiveTab('database'); setShowAddForm(false); }}>
+          <button className={`dock-item ${activeTab === 'database' ? 'active' : ''}`} onClick={() => handleTabSwitch('database')}>
             <DbIcon size={20} />
           </button>
         </div>
