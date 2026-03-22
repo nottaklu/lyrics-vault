@@ -34,6 +34,7 @@ body {
 /* Header */
 .app-header { padding: 50px 24px 10px; display: flex; justify-content: space-between; align-items: center; }
 .app-header h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.03em; margin: 0; }
+.header-logo { width: 32px; height: 32px; border-radius: 8px; object-fit: cover; }
 
 .content-area { flex: 1; padding: 10px 20px 140px; overflow-y: auto; scrollbar-width: none; }
 .content-area::-webkit-scrollbar { display: none; }
@@ -80,11 +81,12 @@ body {
 
 /* Compact Dock */
 .floating-dock-container {
-    position: absolute; bottom: 50px; left: 0; right: 0; display: flex; justify-content: center; pointer-events: none; z-index: 1000;
+    position: absolute; bottom: 60px; left: 0; right: 0; display: flex; justify-content: center; pointer-events: none; z-index: 1000;
 }
 .floating-dock {
     pointer-events: auto; background: rgba(28, 28, 30, 0.85); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
-    padding: 6px; border-radius: 40px; display: flex; gap: 2px; border: 1px solid var(--border); box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+    padding: 6px; border-radius: 40px; display: flex; gap: 4px; border: 1px solid var(--border); box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+    height: 60px; min-width: 160px; justify-content: center; align-items: center;
 }
 .dock-item {
     padding: 12px; width: 48px; height: 48px; border-radius: 24px; color: var(--text-dim); background: transparent; border: none;

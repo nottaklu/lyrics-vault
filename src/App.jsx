@@ -71,7 +71,7 @@ function App() {
     <div className="app-container">
       <header className="app-header">
         <h1>{activeTab === 'database' ? 'Database' : 'Lyrics'}</h1>
-        <Music size={24} style={{ color: 'var(--accent)' }} />
+        <img src="/logo.png" alt="Logo" className="header-logo" />
       </header>
 
       <main className="content-area">
