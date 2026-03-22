@@ -4,6 +4,8 @@ import SongCard from './components/SongCard';
 import SongModal from './components/SongModal';
 import SongForm from './components/SongForm';
 import { db } from './db';
+import { githubService } from './services/githubService';
+import SyncSetup from './components/SyncSetup';
 import './App.css';
 
 const DEFAULT_SONGS = [
@@ -28,11 +30,27 @@ function App() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingSong, setEditingSong] = useState(null);
   const [activeTab, setActiveTab] = useState('library');
+  const [ghToken, setGhToken] = useState(githubService.getToken());
 
   const loadSongs = async () => {
+    try {
+      // 1. Priority: Load from GitHub if token exists
+      if (ghToken) {
+        const ghSongs = await githubService.getSongs();
+        if (ghSongs && ghSongs.length > 0) {
+          // Sync GH songs to local DB
+          await db.songs.clear();
+          await db.songs.bulkAdd(ghSongs);
+        }
+      }
+    } catch (err) {
+      console.error("GitHub Sync failed, falling back to local storage:", err);
+    }
+    
+    // 2. Load from Local DB (Dexie)
     const all = await db.songs.toArray();
-    // Sort by order
     const sorted = all.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    
     if (sorted.length === 0) {
       const initial = DEFAULT_SONGS.map((s, i) => ({ ...s, order: i }));
       await db.songs.bulkAdd(initial);
@@ -47,17 +65,37 @@ function App() {
   }, []);
 
   const handleSaveSong = async (data) => {
-    if (editingSong) {
-      await db.songs.update(editingSong.id, data);
-    } else {
-      const all = await db.songs.toArray();
-      const nextOrder = all.length > 0 ? Math.max(...all.map(s => s.order || 0)) + 1 : 0;
-      await db.songs.add({ ...data, order: nextOrder });
+    try {
+      if (editingSong) {
+        const updated = { ...editingSong, ...data };
+        await githubService.saveSong(updated, data.imageBlob);
+        await db.songs.update(editingSong.id, data);
+      } else {
+        const all = await db.songs.toArray();
+        const nextOrder = all.length > 0 ? Math.max(...all.map(s => s.order || 0)) + 1 : 0;
+        const newSong = { ...data, order: nextOrder };
+        const saved = await githubService.saveSong(newSong, data.imageBlob);
+        await db.songs.add(saved);
+      }
+      await loadSongs();
+      setShowAddForm(false);
+      setEditingSong(null);
+      setActiveTab('database');
+    } catch (err) {
+      console.error("Failed to save to GitHub:", err);
+      // Fallback: save locally
+      if (editingSong) {
+        await db.songs.update(editingSong.id, data);
+      } else {
+        const all = await db.songs.toArray();
+        const nextOrder = all.length > 0 ? Math.max(...all.map(s => s.order || 0)) + 1 : 0;
+        await db.songs.add({ ...data, order: nextOrder });
+      }
+      await loadSongs();
+      setShowAddForm(false);
+      setEditingSong(null);
+      setActiveTab('database');
     }
-    await loadSongs();
-    setShowAddForm(false);
-    setEditingSong(null);
-    setActiveTab('database');
   };
 
   const deleteSong = async (id) => {
@@ -102,6 +140,13 @@ function App() {
     s.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
     (s.keywords && s.keywords.some(k => k.toLowerCase().includes(searchQuery.toLowerCase())))
   ).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+  if (!ghToken) {
+    return <SyncSetup onComplete={(token) => {
+      setGhToken(token);
+      loadSongs();
+    }} />;
+  }
 
   return (
     <div className="app-container">

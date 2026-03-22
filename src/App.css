@@ -127,3 +127,75 @@ body {
 }
 
 .fade-in { animation: fadeIn 0.4s ease; }
+
+/* Sync Setup Overlay */
+.sync-setup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.sync-setup-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 30px;
+  text-align: center;
+  border-radius: 24px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.sync-icon-row {
+  margin-bottom: 20px;
+  color: var(--accent);
+}
+
+.cloud-icon {
+  filter: drop-shadow(0 0 15px rgba(0, 122, 255, 0.4));
+}
+
+.sync-description {
+  color: #888;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.sync-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.error-text {
+  color: #ff453a;
+  font-size: 12px;
+  margin-top: -8px;
+}
+
+.security-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 24px;
+  color: #666;
+  font-size: 11px;
+}
+
+.token-link {
+  display: inline-block;
+  margin-top: 16px;
+  color: var(--accent);
+  font-size: 13px;
+  text-decoration: none;
+}

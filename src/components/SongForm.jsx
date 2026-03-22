@@ -14,6 +14,7 @@ const SongForm = ({ onSave, onCancel, initialData }) => {
     : (formData.keywords || '');
 
   const [keywordsDisplay, setKeywordsDisplay] = useState(keywordsInitial);
+  const [imageBlob, setImageBlob] = useState(null);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -25,7 +26,8 @@ const SongForm = ({ onSave, onCancel, initialData }) => {
 
     onSave({
       ...formData,
-      keywords: keywordsArray
+      keywords: keywordsArray,
+      imageBlob: imageBlob
     });
   };
 
@@ -66,6 +68,14 @@ const SongForm = ({ onSave, onCancel, initialData }) => {
                 value={keywordsDisplay}
                 onChange={e => setKeywordsDisplay(e.target.value)}
                 placeholder="fast, hits, energetic"
+              />
+            </div>
+            <div className="form-group">
+              <label>Lyric Image (Link to GitHub Sync)</label>
+              <input 
+                type="file" 
+                accept="image/*"
+                onChange={e => setImageBlob(e.target.files[0])}
               />
             </div>
             <div className="form-group">

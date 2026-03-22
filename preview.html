@@ -325,7 +325,8 @@
         }
 
         function deleteSong(id) {
-            if (confirm('Delete?')) {
+            const s = songs.find(x => x.id === id);
+            if (confirm(`Are you absolutely sure you want to delete "${s.title}"?`)) {
                 songs = songs.filter(x => x.id !== id);
                 localStorage.setItem('songs', JSON.stringify(songs));
                 render();
