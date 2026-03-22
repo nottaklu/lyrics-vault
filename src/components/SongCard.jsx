@@ -2,10 +2,15 @@ import React from 'react';
 
 const SongCard = ({ song, onClick }) => {
   return (
-    <div className="song-card" onClick={onClick}>
-      {song.imageUrl && <img src={song.imageUrl} alt={song.title} loading="lazy" />}
-      <div className="song-card-overlay">
+    <div className="song-card text-card" onClick={onClick}>
+      <div className="song-card-content">
+        <span className="song-card-scale">{song.scale || 'Standard'}</span>
         <h3 className="song-card-title">{song.title}</h3>
+        <div className="song-card-keywords">
+          {song.keywords?.slice(0, 2).map((kw, i) => (
+            <span key={i} className="mini-pill">{kw}</span>
+          ))}
+        </div>
       </div>
     </div>
   );

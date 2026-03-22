@@ -1,57 +1,6 @@
-:root {
-  --bg-color: #FAFAFA;
-  --card-bg: #FFFFFF;
-  --primary-accent: #1A1A1A;
-  --text-muted: #888888;
-  --border-color: #EEEEEE;
-  --tag-bg: #F0F0F0;
-  
-  --font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-* {
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
-}
-
+/* reset or empty index.css to avoid conflicts with App.css */
 body {
   margin: 0;
   padding: 0;
-  font-family: var(--font-family);
-  background-color: var(--bg-color);
-  color: var(--primary-accent);
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-}
-
-button {
-  font-family: inherit;
-  cursor: pointer;
-  border: none;
-  background: none;
-  transition: transform 0.1s ease;
-}
-
-button:active {
-  transform: scale(0.97);
-}
-
-input, textarea {
-  font-family: inherit;
-  font-size: 16px; /* Prevent zooming on iOS focus */
-}
-
-h1, h2, h3 {
-  margin: 0;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-.label-caps {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-muted);
+  background: #000;
 }

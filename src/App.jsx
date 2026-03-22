@@ -1,247 +1,225 @@
 import React, { useState, useEffect } from 'react';
-import { Library, PlusCircle, Settings, Github, Key } from 'lucide-react';
-import SearchBar from './components/SearchBar';
+import { Library, Plus, X, Music, Search as SearchIcon, Database as DbIcon, Edit2, Trash2 } from 'lucide-react';
 import SongCard from './components/SongCard';
 import SongModal from './components/SongModal';
+import SearchBar from './components/SearchBar';
 import SongForm from './components/SongForm';
-import SongList from './components/SongList';
-import Toast from './components/Toast';
-import { githubService } from './services/githubService';
+import { db } from './db';
 import './App.css';
 
+const DEFAULT_SONGS = [
+  {
+    title: "Prem Ni Aa Season",
+    scale: "D Minor",
+    chords: "Dm, G, C",
+    keywords: ["festive", "energetic", "hits"],
+    lyrics: `[Verse 1]\nPrem ni aa season che\nHraday ma mara kevi che\nTara vina kem karvani\nPrem ni aa season che\n\n[Chorus]\nAavi ja tu pase mara\nDil ni vaato karvi che\nPrem ni aa season ma\nTari sathe revu che`
+  },
+  {
+    title: "Tu Hi Re",
+    scale: "G Major",
+    chords: "G, D, Em, C",
+    keywords: ["romantic", "bollywood", "soulful"],
+    lyrics: `[Verse 1]\nTu hi re, tu hi re tere bina main kaise jiyu\nAaja re, aaja re, yu hi tadpa na tu mujhko\nJaan re, jaan re, in saanso mein bas ja tu\nChandani raat mein, teri yaad aaye...\n\n[Chorus]\nSadiyon se lambi hai raate\nSadiyon se soye nahi hum\nAa jao ki aankhein khuli hai\nTere hi intezaar mein...`
+  }
+];
+
 function App() {
-  const [activeTab, setActiveTab] = useState('library');
   const [songs, setSongs] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSong, setSelectedSong] = useState(null);
+  const [showSearch, setShowSearch] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [editingSong, setEditingSong] = useState(null);
-  const [toastMessage, setToastMessage] = useState('');
-  const [token, setToken] = useState(githubService.getToken() || '');
-  const [loading, setLoading] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(!!githubService.getToken());
+  const [activeTab, setActiveTab] = useState('library');
 
-  // Fetch songs on load
-  useEffect(() => {
-    if (isLoggedIn) {
-      loadSongs();
-    }
-  }, [isLoggedIn]);
-
+  // Load songs from DB
   const loadSongs = async () => {
-    setLoading(true);
     try {
-      const allSongs = await githubService.getSongs();
-      setSongs(allSongs);
-    } catch (error) {
-      console.error(error);
-      showToast('Error syncing with GitHub');
-    } finally {
-      setLoading(false);
+      const allSongs = await db.songs.toArray();
+      if (allSongs.length === 0) {
+        await db.songs.bulkAdd(DEFAULT_SONGS);
+        setSongs(await db.songs.toArray());
+      } else {
+        setSongs(allSongs);
+      }
+    } catch (err) {
+      console.error("Failed to load songs:", err);
     }
   };
 
-  const showToast = (message) => {
-    setToastMessage(message);
-    setTimeout(() => setToastMessage(''), 3000);
-  };
+  useEffect(() => {
+    loadSongs();
+  }, []);
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    if (token.trim()) {
-      githubService.setToken(token);
-      setIsLoggedIn(true);
-      showToast('GitHub Sync Active ✓');
-    }
-  };
-
-  const handleLogout = () => {
-    githubService.setToken('');
-    setToken('');
-    setIsLoggedIn(false);
-    setSongs([]);
-  };
-
-  const handleAddSong = async (songData) => {
+  const handleSaveSong = async (songData) => {
     try {
-      const newSong = await githubService.saveSong(songData, songData.imageBlob);
-      setSongs([newSong, ...songs]);
-      showToast('Song saved to GitHub ✓');
-      setActiveTab('library');
-    } catch (error) {
-      console.error(error);
-      showToast('Error saving song');
-    }
-  };
-
-  const handleUpdateSong = async (songData) => {
-    try {
-      await githubService.updateSong(editingSong.id, songData, songData.imageBlob);
+      if (editingSong) {
+        await db.songs.update(editingSong.id, songData);
+      } else {
+        await db.songs.add(songData);
+      }
       await loadSongs();
-      showToast('Song updated on GitHub ✓');
+      setShowAddForm(false);
       setEditingSong(null);
-      setActiveTab('library');
-    } catch (error) {
-      console.error(error);
-      showToast('Error updating song');
+      setActiveTab('database');
+    } catch (err) {
+      console.error("Failed to save song:", err);
     }
   };
 
   const handleDeleteSong = async (id) => {
-    try {
-      await githubService.deleteSong(id);
-      setSongs(songs.filter(s => s.id !== id));
-      showToast('Song deleted');
-    } catch (error) {
-      console.error(error);
-      showToast('Error deleting song');
+    if (window.confirm('Delete this song permanently from database?')) {
+      await db.songs.delete(id);
+      await loadSongs();
     }
   };
 
   const filteredSongs = songs.filter(song => 
     song.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (song.keywords && song.keywords.some(kw => kw.toLowerCase().includes(searchQuery.toLowerCase())))
+    song.keywords?.some(kw => kw.toLowerCase().includes(searchQuery.toLowerCase()))
   );
-
-  if (!isLoggedIn) {
-    return (
-      <div className="app-container" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '40px' }}>
-        <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <Github size={64} style={{ marginBottom: 20 }} />
-          <h1>Lyrics Vault</h1>
-          <p style={{ color: '#888', marginTop: 12 }}>Connect your GitHub to sync lyrics across all your devices.</p>
-        </div>
-        
-        <form onSubmit={handleLogin}>
-          <div className="form-group">
-            <label className="form-label">Personal Access Token</label>
-            <div style={{ position: 'relative' }}>
-              <Key size={18} style={{ position: 'absolute', left: 14, top: 14, color: '#888' }} />
-              <input
-                type="password"
-                className="input-field"
-                style={{ paddingLeft: 42 }}
-                placeholder="Paste your token here..."
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                required
-              />
-            </div>
-            <p style={{ fontSize: 12, color: '#888', marginTop: 12 }}>
-              Your token stays in this browser and is only used to save your lyrics to your repository.
-            </p>
-          </div>
-          <button type="submit" className="save-btn">Connect & Sync</button>
-        </form>
-      </div>
-    );
-  }
 
   return (
     <div className="app-container">
-      {activeTab === 'library' ? (
-        <div className="page-library">
-          <SearchBar value={searchQuery} onChange={setSearchQuery} />
-          
-          {loading && <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Spinner /></div>}
-          
-          <div className="song-grid">
-            {filteredSongs.map(song => (
-              <SongCard 
-                key={song.id} 
-                song={song} 
-                onClick={() => setSelectedSong(song)} 
-              />
+      <header className="app-header">
+        <div className="header-top">
+          <h1>{activeTab === 'library' ? 'Lyrics' : activeTab === 'add' ? 'Add Song' : 'Database'}</h1>
+          <div className="header-icon">
+            <Music size={24} color="#007AFF" />
+          </div>
+        </div>
+      </header>
+
+      <main className="content-area">
+        {activeTab === 'library' && (
+          <div className="library-view fade-in">
+            <div className="top-search-container">
+              <div className="search-pill glass-morphism">
+                <SearchIcon size={18} className="search-icon" />
+                <input 
+                  type="text" 
+                  placeholder="Search songs or tags..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="top-search-input"
+                />
+                {searchQuery && (
+                  <button className="clear-search" onClick={() => setSearchQuery('')}>
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            <div className="song-grid">
+              {filteredSongs.map(song => (
+                <SongCard 
+                  key={song.id} 
+                  song={song} 
+                  onClick={() => setSelectedSong(song)} 
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'database' && (
+          <div className="database-view fade-in">
+            {songs.map(song => (
+              <div key={song.id} className="db-list-item glass-morphism">
+                <div className="db-item-info">
+                  <h3>{song.title}</h3>
+                  <span>{song.scale}</span>
+                </div>
+                <div className="db-item-actions">
+                  <button className="icon-btn edit-btn" onClick={() => {
+                    setEditingSong(song);
+                    setShowAddForm(true);
+                  }}>
+                    <Edit2 size={18} />
+                  </button>
+                  <button className="icon-btn delete-btn" onClick={() => handleDeleteSong(song.id)}>
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
+        )}
 
-          {!loading && filteredSongs.length === 0 && (
-            <div style={{ padding: '80px 20px', textAlign: 'center', color: '#888' }}>
-              <p>No songs found in your library.</p>
-            </div>
-          )}
-        </div>
-      ) : activeTab === 'manage' ? (
-        <div className="page-manage content-section">
-          <h2 style={{ marginBottom: 24 }}>{editingSong ? 'Edit Song' : 'Add New Song'}</h2>
-          
-          <SongForm 
-            onSubmit={editingSong ? handleUpdateSong : handleAddSong} 
-            initialData={editingSong}
-            isUpdating={!!editingSong}
-          />
-
-          <h2 style={{ marginTop: 48, marginBottom: 16 }}>Your Songs</h2>
-          <SongList 
-            songs={songs} 
-            onEdit={(song) => {
-              setEditingSong(song);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            onDelete={handleDeleteSong}
-          />
-        </div>
-      ) : (
-        <div className="page-settings content-section">
-          <h2 style={{ marginBottom: 24 }}>Settings</h2>
-          <div className="form-group">
-            <label className="label-caps">Syncing with GitHub</label>
-            <div style={{ background: 'white', padding: 16, borderRadius: 12, border: '1px solid var(--border-color)', marginTop: 8 }}>
-              <div style={{ fontWeight: 600 }}>nottaklu / lyrics-vault</div>
-              <div style={{ fontSize: 13, color: '#888', marginTop: 4 }}>You are signed in with a Personal Access Token.</div>
-            </div>
+        {activeTab === 'add' && (
+          <div className="add-view fade-in" style={{ padding: '40px 20px', textAlign: 'center' }}>
+            <p style={{ color: '#888' }}>Ready to add a new song to your collection?</p>
+            <p style={{ color: '#555', fontSize: '14px', marginTop: '10px' }}>Use the Add button in the dock below.</p>
           </div>
+        )}
+      </main>
+
+      {/* Floating Bottom Nav - Compact Icons */}
+      <nav className="floating-dock-container">
+        <div className="floating-dock shadow-lg">
           <button 
-            onClick={handleLogout} 
-            style={{ color: '#FF3B30', fontWeight: 600, padding: '16px 0' }}
+            className={`dock-item ${activeTab === 'library' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('library'); setShowAddForm(false); }}
           >
-            Disconnect Account & Wipe Local Token
+            <Library size={22} />
           </button>
+          
+          <button 
+            className={`dock-item ${activeTab === 'add' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTab('add');
+              setEditingSong(null);
+              setShowAddForm(true);
+            }}
+          >
+            <Plus size={22} />
+          </button>
+          
+          <button 
+            className={`dock-item ${activeTab === 'database' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('database'); setShowAddForm(false); }}
+          >
+            <DbIcon size={22} />
+          </button>
+        </div>
+      </nav>
+
+      {/* Search Overlay */}
+      {showSearch && (
+        <div className="search-overlay">
+          <div className="search-overlay-header">
+            <SearchBar value={searchQuery} onChange={setSearchQuery} />
+            <button className="close-overlay" onClick={() => { setShowSearch(false); setSearchQuery(''); }}>
+              <X size={24} />
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Tabs */}
-      <nav className="tab-bar">
-        <button 
-          className={`tab-item ${activeTab === 'library' ? 'active' : ''}`}
-          onClick={() => setActiveTab('library')}
-        >
-          <Library size={24} />
-          <span>Library</span>
-        </button>
-        <button 
-          className={`tab-item ${activeTab === 'manage' ? 'active' : ''}`}
-          onClick={() => {
-            setActiveTab('manage');
-            if (activeTab === 'manage') setEditingSong(null);
-          }}
-        >
-          <PlusCircle size={24} />
-          <span>Add / Edit</span>
-        </button>
-        <button 
-          className={`tab-item ${activeTab === 'settings' ? 'active' : ''}`}
-          onClick={() => setActiveTab('settings')}
-        >
-          <Settings size={24} />
-          <span>Settings</span>
-        </button>
-      </nav>
+      {/* Add/Edit Form Overlay */}
+      {showAddForm && (
+        <SongForm 
+          onSave={handleSaveSong} 
+          initialData={editingSong}
+          onCancel={() => {
+            setShowAddForm(false);
+            setEditingSong(null);
+            if (activeTab === 'add') setActiveTab('library');
+          }} 
+        />
+      )}
 
-      {/* Modal */}
+      {/* Lyrics Modal */}
       {selectedSong && (
         <SongModal 
           song={selectedSong} 
           onClose={() => setSelectedSong(null)} 
         />
       )}
-
-      {/* Toast */}
-      <Toast message={toastMessage} />
     </div>
   );
 }
-
-// Inline Spinner and Icon
-const Spinner = () => <div className="spinner"></div>;
 
 export default App;
