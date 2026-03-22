@@ -1,27 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Library, Plus, Music, Search as SearchIcon, Database as DbIcon, Edit2, Trash2, GripVertical } from 'lucide-react';
+import { Library, Plus, Search as SearchIcon, Database as DbIcon, Edit2, Trash2, GripVertical } from 'lucide-react';
 import SongCard from './components/SongCard';
 import SongModal from './components/SongModal';
 import SongForm from './components/SongForm';
-import { db } from './db';
 import { githubService } from './services/githubService';
 import SyncSetup from './components/SyncSetup';
 import './App.css';
-
-const DEFAULT_SONGS = [
-  {
-    title: "Prem Ni Aa Season",
-    scale: "D Minor",
-    keywords: ["fast", "wedding"],
-    lyrics: `[Verse 1]\nPrem ni aa season che\nHraday ma mara kevi che\nTara vina kem karvani\nPrem ni aa season che\n\n[Chorus]\nAavi ja tu pase mara\nDil ni vaato karvi che\nPrem ni aa season ma\nTari sathe revu che`
-  },
-  {
-    title: "Tu Hi Re",
-    scale: "G Major",
-    keywords: ["romantic", "bollywood"],
-    lyrics: `[Verse 1]\nTu hi re, tu hi re tere bina main kaise jiyu\nAaja re, aaja re, yu hi tadpa na tu mujhko\nJaan re, jaan re, in saanso mein bas ja tu\nChandani raat mein, teri yaad aaye...\n\n[Chorus]\nSadiyon se lambi hai raate\nSadiyon se soye nahi hum\nAa jao ki aankhein khuli hai\nTere hi intezaar mein...`
-  }
-];
 
 function App() {
   const [songs, setSongs] = useState([]);
@@ -30,88 +14,96 @@ function App() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingSong, setEditingSong] = useState(null);
   const [activeTab, setActiveTab] = useState('library');
-  const [showSyncSetup, setShowSyncSetup] = useState(false);
   const [ghToken, setGhToken] = useState(githubService.getToken());
+  const [loading, setLoading] = useState(true);
 
+  // Load songs from GitHub only
   const loadSongs = async () => {
-    // 1. Load local DB first
-    let localSongs = await db.songs.toArray();
-
-    // 2. If empty, seed with defaults
-    if (localSongs.length === 0) {
-      const initial = DEFAULT_SONGS.map((s, i) => ({ ...s, order: i }));
-      await db.songs.bulkAdd(initial);
-      localSongs = await db.songs.toArray();
+    if (!ghToken) { setLoading(false); return; }
+    setLoading(true);
+    try {
+      const ghSongs = await githubService.getSongs();
+      const sorted = (ghSongs || []).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      setSongs(sorted);
+    } catch (err) {
+      console.error("Failed to load from GitHub:", err);
     }
-
-    // 3. If GitHub token exists, MERGE GitHub songs into local
-    if (ghToken) {
-      try {
-        const ghSongs = await githubService.getSongs();
-        if (ghSongs && ghSongs.length > 0) {
-          // Merge: add any GitHub songs that don't already exist locally (by title)
-          const localTitles = new Set(localSongs.map(s => s.title.toLowerCase()));
-          const newFromGH = ghSongs.filter(s => !localTitles.has(s.title.toLowerCase()));
-          if (newFromGH.length > 0) {
-            const maxOrder = localSongs.length > 0 ? Math.max(...localSongs.map(s => s.order || 0)) : -1;
-            const toAdd = newFromGH.map((s, i) => ({ ...s, order: maxOrder + 1 + i }));
-            await db.songs.bulkAdd(toAdd);
-            localSongs = await db.songs.toArray();
-          }
-        }
-      } catch (err) {
-        console.error("GitHub sync failed, using local data:", err);
-      }
-    }
-
-    // 4. Sort by order and display
-    const sorted = localSongs.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    setSongs(sorted);
+    setLoading(false);
   };
 
   useEffect(() => {
     loadSongs();
-  }, []);
+  }, [ghToken]);
 
+  // Save: update songs.json on GitHub directly
   const handleSaveSong = async (data) => {
-    if (editingSong) {
-      await db.songs.update(editingSong.id, data);
-    } else {
-      const all = await db.songs.toArray();
-      const nextOrder = all.length > 0 ? Math.max(...all.map(s => s.order || 0)) + 1 : 0;
-      await db.songs.add({ ...data, order: nextOrder });
-    }
+    try {
+      const songsFile = await githubService.fetchFile('data/songs.json');
+      const currentSongs = songsFile ? songsFile.content : [];
 
-    // Try to sync to GitHub in the background (non-blocking)
-    if (ghToken) {
-      try {
-        await githubService.saveSong({ ...data, id: editingSong?.id || Date.now() }, data.imageBlob);
-      } catch (err) {
-        console.error("GitHub push failed (saved locally):", err);
+      let updatedSongs;
+      if (editingSong) {
+        // Update existing
+        updatedSongs = currentSongs.map(s =>
+          s.id === editingSong.id ? { ...s, ...data, keywords: data.keywords } : s
+        );
+      } else {
+        // Add new
+        const maxOrder = currentSongs.length > 0 ? Math.max(...currentSongs.map(s => s.order || 0)) : -1;
+        const newSong = {
+          ...data,
+          id: Date.now(),
+          order: maxOrder + 1,
+          createdAt: new Date().toISOString()
+        };
+        updatedSongs = [...currentSongs, newSong];
       }
-    }
 
-    await loadSongs();
-    setShowAddForm(false);
-    setEditingSong(null);
-    setActiveTab('database');
+      // Push to GitHub
+      await githubService.uploadFile(
+        'data/songs.json',
+        JSON.stringify(updatedSongs, null, 2),
+        editingSong ? `Update: ${data.title}` : `Add: ${data.title}`,
+        songsFile?.sha
+      );
+
+      // Refresh from GitHub
+      await loadSongs();
+      setShowAddForm(false);
+      setEditingSong(null);
+      setActiveTab('database');
+    } catch (err) {
+      console.error("Save failed:", err);
+      alert("Failed to save. Check your internet connection or token.");
+    }
   };
 
+  // Delete: remove from songs.json on GitHub
   const deleteSong = async (id) => {
     const song = songs.find(s => s.id === id);
     const title = song ? song.title : 'this song';
-    if (window.confirm(`Delete "${title}"?`)) {
-      await db.songs.delete(id);
-      // Try to sync delete to GitHub
-      if (ghToken) {
-        try { await githubService.deleteSong(id); } catch (e) { console.error(e); }
-      }
+    if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return;
+
+    try {
+      const songsFile = await githubService.fetchFile('data/songs.json');
+      if (!songsFile) return;
+      const updatedSongs = songsFile.content.filter(s => s.id !== id);
+      await githubService.uploadFile(
+        'data/songs.json',
+        JSON.stringify(updatedSongs, null, 2),
+        `Delete: ${title}`,
+        songsFile.sha
+      );
       await loadSongs();
+    } catch (err) {
+      console.error("Delete failed:", err);
+      alert("Failed to delete. Check your connection.");
     }
   };
 
+  // Drag & drop reorder: save new order to GitHub
   const handleDragStart = (e, id) => {
-    e.dataTransfer.setData('id', id);
+    e.dataTransfer.setData('id', String(id));
   };
 
   const handleDragOver = (e) => {
@@ -124,26 +116,41 @@ function App() {
 
     const sourceIndex = songs.findIndex(s => s.id === sourceId);
     const targetIndex = songs.findIndex(s => s.id === targetId);
-
     if (sourceIndex === -1 || targetIndex === -1) return;
 
     const newSongs = [...songs];
     const [movedSong] = newSongs.splice(sourceIndex, 1);
     newSongs.splice(targetIndex, 0, movedSong);
 
-    const updates = newSongs.map((s, i) => ({
-      key: s.id,
-      changes: { order: i }
-    }));
+    // Assign new orders
+    const reordered = newSongs.map((s, i) => ({ ...s, order: i }));
+    setSongs(reordered); // Instant UI update
 
-    await Promise.all(updates.map(u => db.songs.update(u.key, u.changes)));
-    setSongs(newSongs);
+    // Push reordered list to GitHub
+    try {
+      const songsFile = await githubService.fetchFile('data/songs.json');
+      await githubService.uploadFile(
+        'data/songs.json',
+        JSON.stringify(reordered, null, 2),
+        'Reorder songs',
+        songsFile?.sha
+      );
+    } catch (err) {
+      console.error("Reorder sync failed:", err);
+    }
   };
 
-  const filtered = songs.filter(s => 
-    s.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+  const filtered = songs.filter(s =>
+    s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (s.keywords && s.keywords.some(k => k.toLowerCase().includes(searchQuery.toLowerCase())))
   ).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+  // If no token, show sync setup
+  if (!ghToken) {
+    return <SyncSetup onComplete={(token) => {
+      setGhToken(token);
+    }} />;
+  }
 
   return (
     <div className="app-container">
@@ -152,14 +159,16 @@ function App() {
       </header>
 
       <main className="content-area">
-        {activeTab === 'library' && (
+        {loading && <p style={{ textAlign: 'center', color: '#888', padding: '40px' }}>Loading from cloud...</p>}
+
+        {!loading && activeTab === 'library' && (
           <div className="library-view fade-in">
             <div className="search-bar-container">
               <div className="search-pill">
                 <SearchIcon size={18} className="search-icon" />
-                <input 
-                  type="text" 
-                  placeholder="Search songs or tags..." 
+                <input
+                  type="text"
+                  placeholder="Search songs or tags..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -173,12 +182,12 @@ function App() {
           </div>
         )}
 
-        {activeTab === 'database' && (
+        {!loading && activeTab === 'database' && (
           <div className="database-view fade-in">
             <div className="db-list">
-              {songs.map((s, index) => (
-                <div 
-                  key={s.id} 
+              {songs.map((s) => (
+                <div
+                  key={s.id}
                   className="db-item"
                   draggable
                   onDragStart={(e) => handleDragStart(e, s.id)}
@@ -224,23 +233,15 @@ function App() {
       </nav>
 
       {showAddForm && (
-        <SongForm 
-          onSave={handleSaveSong} 
+        <SongForm
+          onSave={handleSaveSong}
           initialData={editingSong}
-          onCancel={() => { setShowAddForm(false); setEditingSong(null); }} 
+          onCancel={() => { setShowAddForm(false); setEditingSong(null); }}
         />
       )}
 
       {selectedSong && (
         <SongModal song={selectedSong} onClose={() => setSelectedSong(null)} />
-      )}
-
-      {showSyncSetup && (
-        <SyncSetup onComplete={(token) => {
-          setGhToken(token);
-          setShowSyncSetup(false);
-          loadSongs();
-        }} />
       )}
     </div>
   );
