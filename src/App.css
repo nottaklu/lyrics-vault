@@ -80,7 +80,7 @@ body {
 
 /* Compact Dock */
 .floating-dock-container {
-    position: absolute; bottom: 24px; left: 0; right: 0; display: flex; justify-content: center; pointer-events: none; z-index: 1000;
+    position: absolute; bottom: 50px; left: 0; right: 0; display: flex; justify-content: center; pointer-events: none; z-index: 1000;
 }
 .floating-dock {
     pointer-events: auto; background: rgba(28, 28, 30, 0.85); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
