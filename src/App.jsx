@@ -3,6 +3,7 @@ import { Library, Plus, Music, Search as SearchIcon, Database as DbIcon, Edit2, 
 import SongCard from './components/SongCard';
 import SongModal from './components/SongModal';
 import SongForm from './components/SongForm';
+import PinOverlay from './components/PinOverlay';
 import { db } from './db';
 import './App.css';
 
@@ -28,6 +29,12 @@ function App() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingSong, setEditingSong] = useState(null);
   const [activeTab, setActiveTab] = useState('library');
+  
+  // PIN Logic
+  const [isPinVerified, setIsPinVerified] = useState(() => 
+    localStorage.getItem('isPinVerified') === 'true'
+  );
+  const [showPinOverlay, setShowPinOverlay] = useState(false);
 
   const loadSongs = async () => {
     const all = await db.songs.toArray();
@@ -42,6 +49,33 @@ function App() {
   useEffect(() => {
     loadSongs();
   }, []);
+
+  useEffect(() => {
+    if (showPinOverlay || showAddForm || selectedSong) {
+      document.body.classList.add('lock-scroll');
+    } else {
+      document.body.classList.remove('lock-scroll');
+    }
+  }, [showPinOverlay, showAddForm, selectedSong]);
+
+  const handleAddClick = () => {
+    if (isPinVerified) {
+      setEditingSong(null);
+      setShowAddForm(true);
+      setActiveTab('add');
+    } else {
+      setShowPinOverlay(true);
+    }
+  };
+
+  const onPinVerify = () => {
+    localStorage.setItem('isPinVerified', 'true');
+    setIsPinVerified(true);
+    setShowPinOverlay(false);
+    setEditingSong(null);
+    setShowAddForm(true);
+    setActiveTab('add');
+  };
 
   const handleSaveSong = async (data) => {
     if (editingSong) {
@@ -125,7 +159,7 @@ function App() {
           <button className={`dock-item ${activeTab === 'library' ? 'active' : ''}`} onClick={() => { setActiveTab('library'); setShowAddForm(false); }}>
             <Library size={20} />
           </button>
-          <button className="dock-item" onClick={() => { setEditingSong(null); setShowAddForm(true); }}>
+          <button className={`dock-item ${activeTab === 'add' ? 'active' : ''}`} onClick={handleAddClick}>
             <Plus size={20} />
           </button>
           <button className={`dock-item ${activeTab === 'database' ? 'active' : ''}`} onClick={() => { setActiveTab('database'); setShowAddForm(false); }}>
@@ -133,6 +167,10 @@ function App() {
           </button>
         </div>
       </nav>
+
+      {showPinOverlay && (
+        <PinOverlay onVerify={onPinVerify} onCancel={() => setShowPinOverlay(false)} />
+      )}
 
       {showAddForm && (
         <SongForm 

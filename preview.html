@@ -24,9 +24,11 @@
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideInUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
         body { background-color: #050505; color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; min-height: 100vh; display: flex; justify-content: center; align-items: center; }
+        body.lock-scroll { overflow: hidden !important; height: 100vh !important; }
 
         .app-container {
             width: 100%; max-width: 440px; height: 100vh; background: var(--bg); position: relative;
@@ -39,11 +41,11 @@
 
         header { padding: 50px 24px 10px; display: flex; justify-content: space-between; align-items: center; }
         header h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.03em; }
+        .header-logo { width: 32px; height: 32px; border-radius: 8px; object-fit: cover; }
 
         .content { flex: 1; padding: 10px 20px 140px; overflow-y: auto; scrollbar-width: none; }
         .content::-webkit-scrollbar { display: none; }
 
-        /* Top Search Pill */
         .search-bar-container { padding: 0 4px 20px; }
         .search-pill { 
             display: flex; align-items: center; background: rgba(255,255,255,0.06); 
@@ -59,28 +61,11 @@
             border-radius: 24px; padding: 20px; height: 160px; display: flex; flex-direction: column; justify-content: space-between;
             cursor: pointer; transition: all 0.2s;
         }
-        .song-card:active { transform: scale(0.96); background: rgba(255,255,255,0.15); }
         .song-card-scale { font-size: 13px; color: var(--accent); font-weight: 600; }
         .song-card h3 { font-size: 18px; font-weight: 600; line-height: 1.2; }
-        
         .mini-pill-row { display: flex; flex-wrap: wrap; gap: 8px; }
         .mini-pill { background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 100px; font-size: 10px; color: var(--text-dim); }
 
-        /* Database View */
-        .db-list { display: flex; flex-direction: column; gap: 12px; }
-        .db-item {
-            background: var(--glass); border: 1px solid var(--border); padding: 16px 20px; border-radius: 20px;
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .db-item-actions { display: flex; gap: 10px; }
-        .icon-btn {
-            background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: white;
-            width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;
-        }
-        .edit-btn { color: var(--accent); }
-        .delete-btn { color: #FF453A; }
-
-        /* Compact Dock */
         .dock {
             position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%);
             background: rgba(28, 28, 30, 0.85); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
@@ -89,10 +74,27 @@
         }
         .dock-item {
             padding: 12px; width: 48px; height: 48px; border-radius: 24px; color: var(--text-dim); background: transparent; border: none;
-            cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+            cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; flex-shrink: 0;
         }
         .dock-item.active { background: rgba(255, 255, 255, 0.1); color: var(--accent); transform: scale(1.1); }
-        .dock-item:active { transform: scale(0.9); }
+
+        /* Security PIN Overlay */
+        .pin-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+            z-index: 3000; display: none; justify-content: center; align-items: center; animation: fadeIn 0.4s ease;
+        }
+        .pin-content {
+            background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border);
+            padding: 40px 30px; border-radius: 32px; width: 90%; max-width: 320px;
+            text-align: center; display: flex; flex-direction: column; gap: 24px;
+        }
+        .pin-dots { display: flex; justify-content: center; gap: 16px; }
+        .pin-dot { width: 14px; height: 14px; border-radius: 50%; background: rgba(255, 255, 255, 0.1); border: 1px solid var(--border); }
+        .pin-dot.active { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+        .pin-dot.error { background: #FF453A; animation: shake 0.4s; }
+
+        .hidden-input { position: absolute; opacity: 0; pointer-events: none; }
 
         /* Modals */
         .modal {
@@ -104,7 +106,6 @@
             display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border); animation: slideInUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
         }
         .modal-header { padding: 30px 24px 20px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border); }
-        .modal-close { background: var(--glass); border: none; color: white; width: 40px; height: 40px; border-radius: 20px; display: flex; align-items: center; justify-content: center; }
         .modal-body { flex: 1; padding: 30px 24px; overflow-y: auto; }
         
         .form-group { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
@@ -112,12 +113,11 @@
         .form-group input, .form-group textarea {
             background: var(--glass); border: 1px solid var(--border); border-radius: 12px; padding: 14px; color: white; font-size: 16px; outline: none;
         }
-        .form-group textarea { height: 200px; font-family: 'Fira Code', monospace; }
-        .save-btn { background: var(--accent); color: white; padding: 18px; border-radius: 16px; border: none; font-weight: 700; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .header-logo { width: 32px; height: 32px; border-radius: 8px; object-fit: cover; }
+        .form-group textarea { height: 200px; font-family: 'Fira Code', monospace; resize: none; }
+        .save-btn { background: var(--accent); color: white; padding: 18px; border-radius: 16px; border: none; font-weight: 700; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
     </style>
 </head>
-<body>
+<body id="mainBody">
 
     <div class="app-container">
         <header id="appHeader">
@@ -135,30 +135,37 @@
                 </div>
                 <div id="libraryView" class="song-grid"></div>
             </div>
-            
             <div id="databaseView" class="db-list" style="display: none;"></div>
         </main>
 
         <nav class="dock">
-            <button class="dock-item active" id="tabLib" onclick="switchTab('library')">
-                <i data-lucide="library" size="20"></i>
-            </button>
-            <button class="dock-item" id="tabAdd" onclick="openAddForm()">
-                <i data-lucide="plus" size="20"></i>
-            </button>
-            <button class="dock-item" id="tabDb" onclick="switchTab('database')">
-                <i data-lucide="database" size="20"></i>
-            </button>
+            <button class="dock-item active" id="tabLib" onclick="switchTab('library')"><i data-lucide="library" size="20"></i></button>
+            <button class="dock-item" id="tabAdd" onclick="handleAddBtn()"><i data-lucide="plus" size="20"></i></button>
+            <button class="dock-item" id="tabDb" onclick="switchTab('database')"><i data-lucide="database" size="20"></i></button>
         </nav>
+
+        <!-- PIN Overlay -->
+        <div id="pinOverlay" class="pin-overlay">
+            <div class="pin-content">
+                <div class="pin-header">
+                    <div style="margin-bottom:12px; color:var(--accent)"><i data-lucide="lock" size="32"></i></div>
+                    <h2>Security Verification</h2>
+                    <p>Enter 4-digit PIN to manage lyrics.</p>
+                </div>
+                <div class="pin-dots" id="pinDots">
+                    <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+                </div>
+                <input type="number" id="hiddenPinInput" class="hidden-input" oninput="handlePinInput(this.value)">
+                <button style="background:none; border:none; color:var(--text-dim); font-size:14px; cursor:pointer;" onclick="closePin()">Cancel</button>
+            </div>
+        </div>
 
         <!-- Form Modal -->
         <div id="formModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 id="formTitle">New Song</h2>
-                    <button class="modal-close" onclick="closeForm()">
-                        <i data-lucide="x" size="20"></i>
-                    </button>
+                    <button style="background:var(--glass); border:none; color:white; width:40px; height:40px; border-radius:20px; display:flex; align-items:center; justify-content:center;" onclick="closeForm()"><i data-lucide="x" size="20"></i></button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="editId">
@@ -176,7 +183,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <div><span id="modalScale" style="font-size:12px; color:var(--accent); font-weight:700;">SCALE</span><h2 id="modalTitle" style="margin-top:4px;">Title</h2></div>
-                    <button class="modal-close" onclick="closeLyrics()"><i data-lucide="x" size="20"></i></button>
+                    <button style="background:var(--glass); border:none; color:white; width:40px; height:40px; border-radius:20px; display:flex; align-items:center; justify-content:center;" onclick="closeLyrics()"><i data-lucide="x" size="20"></i></button>
                 </div>
                 <div class="modal-body"><pre id="modalLyrics" class="lyrics-text"></pre></div>
             </div>
@@ -184,9 +191,10 @@
     </div>
 
     <script>
+        let isPinVerified = localStorage.getItem('isPinVerified') === 'true';
         let songs = JSON.parse(localStorage.getItem('songs')) || [
             { id: 1, title: "Prem Ni Aa Season", scale: "D Minor", keywords: ["fast", "wedding"], lyrics: "[Verse 1]\nPrem ni aa season che..." },
-            { id: 2, title: "Tu Hi Re", scale: "G Major", keywords: ["romantic", "bollywood"], lyrics: "[Verse 1]\nTu hi re, tu hi re..." }
+            { id: 2, title: "Tu Hi Re", scale: "G Major", keywords: ["romantic", "bollywood"], lyrics: "[Verse 1]\nTu hi re, tu hi re tere bina main kaise jiyu..." }
         ];
 
         function render(filter = '') {
@@ -210,10 +218,51 @@
             songs.forEach(s => {
                 const item = document.createElement('div');
                 item.className = 'db-item';
-                item.innerHTML = `<div class="db-info"><h3>${s.title}</h3><span style="color:var(--accent);font-size:12px;">${s.scale}</span></div><div class="db-item-actions"><button class="icon-btn edit-btn" onclick="editSong(${s.id})"><i data-lucide="edit-2" size="16"></i></button><button class="icon-btn delete-btn" onclick="deleteSong(${s.id})"><i data-lucide="trash-2" size="16"></i></button></div>`;
+                item.innerHTML = `<div class="db-info"><h3>${s.title}</h3><span>${s.scale}</span></div><div class="db-item-actions"><button class="icon-btn" style="color:var(--accent)" onclick="editSong(${s.id})"><i data-lucide="edit-2" size="16"></i></button><button class="icon-btn" style="color:#FF453A" onclick="deleteSong(${s.id})"><i data-lucide="trash-2" size="16"></i></button></div>`;
                 dbV.appendChild(item);
             });
             lucide.createIcons();
+        }
+
+        function handleAddBtn() {
+            if (isPinVerified) openAddForm();
+            else openPin();
+        }
+
+        function openPin() {
+            document.getElementById('pinOverlay').style.display = 'flex';
+            document.getElementById('hiddenPinInput').focus();
+            document.getElementById('mainBody').classList.add('lock-scroll');
+        }
+
+        function closePin() {
+            document.getElementById('pinOverlay').style.display = 'none';
+            document.getElementById('hiddenPinInput').value = '';
+            document.getElementById('mainBody').classList.remove('lock-scroll');
+            updatePinDots('');
+        }
+
+        function handlePinInput(val) {
+            updatePinDots(val);
+            if (val === '1234') {
+                isPinVerified = true;
+                localStorage.setItem('isPinVerified', 'true');
+                closePin();
+                openAddForm();
+            } else if (val.length === 4) {
+                const dots = document.querySelectorAll('.pin-dot');
+                dots.forEach(d => d.classList.add('error'));
+                setTimeout(() => {
+                    document.getElementById('hiddenPinInput').value = '';
+                    updatePinDots('');
+                    dots.forEach(d => d.classList.remove('error'));
+                }, 500);
+            }
+        }
+
+        function updatePinDots(val) {
+            const dots = document.querySelectorAll('.pin-dot');
+            dots.forEach((d, i) => d.classList.toggle('active', val.length > i));
         }
 
         function switchTab(tab) {
@@ -224,8 +273,6 @@
             document.getElementById('headerTitle').innerText = tab === 'database' ? 'Database' : 'Lyrics';
         }
 
-        function handleInstantSearch(val) { render(val); }
-
         function openAddForm() {
             document.getElementById('editId').value = '';
             document.getElementById('addTitle').value = '';
@@ -235,9 +282,11 @@
             document.getElementById('formTitle').innerText = 'New Song';
             document.getElementById('saveBtnText').innerText = 'Save Song';
             document.getElementById('formModal').style.display = 'flex';
+            document.getElementById('mainBody').classList.add('lock-scroll');
         }
 
         function editSong(id) {
+            if (!isPinVerified) return openPin();
             const s = songs.find(x => x.id === id);
             document.getElementById('editId').value = s.id;
             document.getElementById('addTitle').value = s.title;
@@ -247,6 +296,7 @@
             document.getElementById('formTitle').innerText = 'Edit Song';
             document.getElementById('saveBtnText').innerText = 'Update Song';
             document.getElementById('formModal').style.display = 'flex';
+            document.getElementById('mainBody').classList.add('lock-scroll');
         }
 
         function saveSong() {
@@ -257,8 +307,7 @@
                 keywords: document.getElementById('addKeywords').value.split(',').map(k=>k.trim()).filter(k=>k!==''),
                 lyrics: document.getElementById('addLyrics').value
             };
-            if (!data.title) return alert('Title required');
-
+            if (!data.title) return;
             if (id) {
                 const idx = songs.findIndex(x => x.id == id);
                 songs[idx] = { ...songs[idx], ...data };
@@ -270,6 +319,7 @@
         }
 
         function deleteSong(id) {
+            if (!isPinVerified) return openPin();
             if (confirm('Delete?')) {
                 songs = songs.filter(x => x.id !== id);
                 localStorage.setItem('songs', JSON.stringify(songs));
@@ -282,10 +332,11 @@
             document.getElementById('modalScale').innerText = s.scale;
             document.getElementById('modalLyrics').innerText = s.lyrics;
             document.getElementById('lyricsModal').style.display = 'flex';
+            document.getElementById('mainBody').classList.add('lock-scroll');
         }
 
-        function closeForm() { document.getElementById('formModal').style.display = 'none'; }
-        function closeLyrics() { document.getElementById('lyricsModal').style.display = 'none'; }
+        function closeForm() { document.getElementById('formModal').style.display = 'none'; document.getElementById('mainBody').classList.remove('lock-scroll'); }
+        function closeLyrics() { document.getElementById('lyricsModal').style.display = 'none'; document.getElementById('mainBody').classList.remove('lock-scroll'); }
 
         render();
     </script>
