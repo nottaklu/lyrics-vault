@@ -35,7 +35,15 @@ function App() {
   const [showPinOverlay, setShowPinOverlay] = useState(false);
   const [pendingTab, setPendingTab] = useState(null);
 
-  const loadSongs = async () => { ... } // (loading logic)
+  const loadSongs = async () => {
+    const all = await db.songs.toArray();
+    if (all.length === 0) {
+      await db.songs.bulkAdd(DEFAULT_SONGS);
+      setSongs(await db.songs.toArray());
+    } else {
+      setSongs(all);
+    }
+  };
 
   useEffect(() => {
     loadSongs();
