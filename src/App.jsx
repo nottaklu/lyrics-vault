@@ -67,17 +67,22 @@ function App() {
     }
   };
 
-  const handleDragStart = (e, index) => {
-    e.dataTransfer.setData('index', index);
+  const handleDragStart = (e, id) => {
+    e.dataTransfer.setData('id', id);
   };
 
   const handleDragOver = (e) => {
     e.preventDefault();
   };
 
-  const handleDrop = async (e, targetIndex) => {
-    const sourceIndex = parseInt(e.dataTransfer.getData('index'));
-    if (sourceIndex === targetIndex) return;
+  const handleDrop = async (e, targetId) => {
+    const sourceId = parseInt(e.dataTransfer.getData('id'));
+    if (sourceId === targetId) return;
+
+    const sourceIndex = songs.findIndex(s => s.id === sourceId);
+    const targetIndex = songs.findIndex(s => s.id === targetId);
+
+    if (sourceIndex === -1 || targetIndex === -1) return;
 
     const newSongs = [...songs];
     const [movedSong] = newSongs.splice(sourceIndex, 1);
@@ -134,9 +139,9 @@ function App() {
                   key={s.id} 
                   className="db-item"
                   draggable
-                  onDragStart={(e) => handleDragStart(e, index)}
+                  onDragStart={(e) => handleDragStart(e, s.id)}
                   onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, index)}
+                  onDrop={(e) => handleDrop(e, s.id)}
                 >
                   <div className="db-item-content">
                     <div className="drag-handle">

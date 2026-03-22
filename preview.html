@@ -87,9 +87,8 @@
         /* Compact Dock */
         .dock {
             position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%);
-            background: rgba(28, 28, 30, 0.85); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
-            padding: 6px; border-radius: 40px; display: flex; gap: 4px; border: 1px solid var(--border); z-index: 100;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.6); height: 60px; width: fit-content; min-width: 180px; align-items: center; justify-content: center;
+            background: #1c1c1e; padding: 8px 12px; border-radius: 40px; display: flex; gap: 8px; border: 1px solid var(--border); z-index: 100;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6); height: 60px; width: fit-content; min-width: 200px; align-items: center; justify-content: center;
         }
         .dock-item {
             padding: 12px; width: 48px; height: 48px; border-radius: 24px; color: var(--text-dim); background: transparent; border: none;
@@ -239,27 +238,31 @@
                 // Drag Events
                 item.addEventListener('dragstart', e => {
                     item.classList.add('dragging');
+                    e.dataTransfer.setData('id', s.id);
                 });
 
                 item.addEventListener('dragend', () => {
                     item.classList.remove('dragging');
-                    // Save the order
-                    const items = Array.from(dbV.children);
-                    songs = items.map((child, idx) => {
-                        const song = songs.find(si => si.id == child.dataset.id);
-                        return { ...song, order: idx };
-                    });
-                    localStorage.setItem('songs', JSON.stringify(songs));
                 });
 
-                item.addEventListener('dragover', e => {
+                item.addEventListener('drop', e => {
                     e.preventDefault();
-                    const draggingItem = document.querySelector('.dragging');
-                    if (draggingItem && draggingItem !== item) {
-                        const rect = item.getBoundingClientRect();
-                        const next = (e.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
-                        dbV.insertBefore(draggingItem, next ? item.nextSibling : item);
-                    }
+                    const sourceId = parseInt(e.dataTransfer.getData('id'));
+                    const targetId = parseInt(item.dataset.id);
+                    if (sourceId === targetId) return;
+
+                    const draggingIdx = songs.findIndex(si => si.id === sourceId);
+                    const targetIdx = songs.findIndex(si => si.id === targetId);
+                    
+                    if (draggingIdx === -1 || targetIdx === -1) return;
+
+                    const [moved] = songs.splice(draggingIdx, 1);
+                    songs.splice(targetIdx, 0, moved);
+                    
+                    // Update orders
+                    songs.forEach((si, idx) => si.order = idx);
+                    localStorage.setItem('songs', JSON.stringify(songs));
+                    render(document.getElementById('topSearchInput').value);
                 });
 
                 dbV.appendChild(item);
