@@ -38,17 +38,16 @@ function App() {
   // Save: update songs.json on GitHub directly
   const handleSaveSong = async (data) => {
     try {
+      // Always fetch fresh to get latest SHA
       const songsFile = await githubService.fetchFile('data/songs.json');
       const currentSongs = songsFile ? songsFile.content : [];
 
       let updatedSongs;
       if (editingSong) {
-        // Update existing
         updatedSongs = currentSongs.map(s =>
           s.id === editingSong.id ? { ...s, ...data, keywords: data.keywords } : s
         );
       } else {
-        // Add new
         const maxOrder = currentSongs.length > 0 ? Math.max(...currentSongs.map(s => s.order || 0)) : -1;
         const newSong = {
           ...data,
@@ -59,7 +58,6 @@ function App() {
         updatedSongs = [...currentSongs, newSong];
       }
 
-      // Push to GitHub
       await githubService.uploadFile(
         'data/songs.json',
         JSON.stringify(updatedSongs, null, 2),
@@ -67,14 +65,14 @@ function App() {
         songsFile?.sha
       );
 
-      // Refresh from GitHub
       await loadSongs();
       setShowAddForm(false);
       setEditingSong(null);
       setActiveTab('database');
     } catch (err) {
       console.error("Save failed:", err);
-      alert("Failed to save. Check your internet connection or token.");
+      // Show the REAL API error so we can debug
+      alert("Save failed: " + err.message);
     }
   };
 

@@ -87,13 +87,15 @@ body {
     position: absolute; bottom: 60px; left: 0; right: 0; display: flex; justify-content: center; pointer-events: none; z-index: 1000;
 }
 .floating-dock {
-    pointer-events: auto; background: #1c1c1e; border: 1px solid var(--border); box-shadow: 0 10px 40px rgba(0,0,0,0.6);
-    padding: 8px 12px; border-radius: 40px; display: flex; gap: 8px;
-    height: 60px; width: fit-content; min-width: 200px; justify-content: center; align-items: center;
+    pointer-events: auto; background: #1c1c1e !important; border: 1px solid var(--border); box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+    padding: 8px 12px !important; border-radius: 40px; display: flex !important; gap: 8px;
+    height: 60px !important; min-height: 60px !important; width: fit-content; min-width: 200px; justify-content: center; align-items: center;
+    flex-shrink: 0;
 }
 .dock-item {
-    padding: 12px; width: 48px; height: 48px; border-radius: 24px; color: var(--text-dim); background: transparent; border: none;
-    cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+    padding: 12px !important; width: 48px !important; height: 48px !important; border-radius: 24px; color: var(--text-dim); background: transparent; border: none;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, color 0.2s, transform 0.2s;
     flex-shrink: 0;
 }
 .dock-item.active { background: rgba(255, 255, 255, 0.1); color: var(--accent); transform: scale(1.1); }
