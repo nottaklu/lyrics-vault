@@ -139,18 +139,23 @@ function App() {
 
         {activeTab === 'database' && (
           <div className="database-view fade-in">
-            <div className="db-list">
+            <div className="song-grid">
               {songs.map(s => (
-                <div key={s.id} className="db-item">
-                  <div className="db-info">
-                    <h3>{s.title}</h3>
-                    <span>{s.scale}</span>
+                <div key={s.id} className="song-card" onClick={() => setSelectedSong(s)}>
+                  <div className="card-header">
+                    <span className="song-card-scale">{s.scale}</span>
                   </div>
-                  <div className="db-item-actions">
-                    <button className="icon-btn edit-btn" onClick={() => { setEditingSong(s); setShowAddForm(true); }}>
+                  <h3>{s.title}</h3>
+                  <div className="tag-row">
+                    {s.keywords?.map((k, i) => (
+                      <span key={i} className="song-tag">{k}</span>
+                    ))}
+                  </div>
+                  <div className="db-card-actions">
+                    <button className="action-btn" onClick={(e) => { e.stopPropagation(); setEditingSong(s); setShowAddForm(true); }}>
                       <Edit2 size={16} />
                     </button>
-                    <button className="icon-btn delete-btn" onClick={() => deleteSong(s.id)}>
+                    <button className="action-btn del" onClick={(e) => { e.stopPropagation(); deleteSong(s.id); }}>
                       <Trash2 size={16} />
                     </button>
                   </div>

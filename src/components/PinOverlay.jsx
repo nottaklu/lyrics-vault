@@ -2,19 +2,19 @@ import React, { useState } from 'react';
 import { Shield, Delete } from 'lucide-react';
 
 const SYMBOLS = ['ᚦ', 'ᛝ', 'ᛟ', 'ᚴ', 'ᚼ', 'ᛘ', 'ᛚ', 'ᛒ', 'ᛞ', 'ᛑ'];
-const CORRECT_SEQUENCE = ['ᚦ', 'ᛝ', 'ᛟ', 'ᚴ']; // The secret sequence
+const CORRECT_SEQUENCE = ['ᚼ', 'ᛞ']; // 5th and 9th symbols
 
 const PinOverlay = ({ onVerify, onCancel }) => {
   const [sequence, setSequence] = useState([]);
   const [error, setError] = useState(false);
 
   const handleTap = (symbol) => {
-    if (sequence.length < 4) {
+    if (sequence.length < 2) {
       const newSeq = [...sequence, symbol];
       setSequence(newSeq);
       setError(false);
 
-      if (newSeq.length === 4) {
+      if (newSeq.length === 2) {
         if (JSON.stringify(newSeq) === JSON.stringify(CORRECT_SEQUENCE)) {
           onVerify();
         } else {
@@ -41,7 +41,7 @@ const PinOverlay = ({ onVerify, onCancel }) => {
         </div>
 
         <div className="pin-dots">
-          {[0, 1, 2, 3].map(i => (
+          {[0, 1].map(i => (
             <div key={i} className={`pin-dot ${sequence.length > i ? 'active' : ''} ${error ? 'error' : ''}`} />
           ))}
         </div>
