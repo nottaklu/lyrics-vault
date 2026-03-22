@@ -27,6 +27,11 @@ function App() {
       setSongs(sorted);
     } catch (err) {
       console.error("Failed to load from GitHub:", err);
+      // If token is expired/invalid, clear it and show re-auth
+      if (err.message && err.message.includes('Bad credentials')) {
+        localStorage.removeItem('gh_token');
+        setGhToken(null);
+      }
     }
     setLoading(false);
   };
