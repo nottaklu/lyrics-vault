@@ -21,15 +21,17 @@ export const githubService = {
   },
 
   async fetchFile(path) {
-    const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}?ref=${BRANCH}`;
+    const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}?ref=${BRANCH}&t=${Date.now()}`;
     const token = this.getToken();
     if (!token) return null;
 
     const response = await fetch(url, {
       headers: {
         'Authorization': `token ${token}`,
-        'Accept': 'application/vnd.github.v3+json'
-      }
+        'Accept': 'application/vnd.github.v3+json',
+        'If-None-Match': ''
+      },
+      cache: 'no-store'
     });
 
     if (response.status === 404) return null;
