@@ -5,6 +5,7 @@ import SongModal from './components/SongModal';
 import SongForm from './components/SongForm';
 import { githubService } from './services/githubService';
 import SyncSetup from './components/SyncSetup';
+import PinLock from './components/PinLock';
 import './App.css';
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
   const [ghToken, setGhToken] = useState(githubService.getToken());
   const [loading, setLoading] = useState(true);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+  const [pinTarget, setPinTarget] = useState(null); // 'database' or 'add'
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
@@ -152,6 +154,7 @@ function App() {
 
   const filtered = songs.filter(s =>
     s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (s.scale && s.scale.toLowerCase().includes(searchQuery.toLowerCase())) ||
     (s.keywords && s.keywords.some(k => k.toLowerCase().includes(searchQuery.toLowerCase())))
   ).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
@@ -230,10 +233,10 @@ function App() {
           <button className={`dock-item ${activeTab === 'library' ? 'active' : ''}`} onClick={() => { setActiveTab('library'); setShowAddForm(false); }}>
             <Library size={20} />
           </button>
-          <button className="dock-item" onClick={() => { setEditingSong(null); setShowAddForm(true); }}>
+          <button className="dock-item" onClick={() => { setPinTarget('add'); }}>
             <Plus size={20} />
           </button>
-          <button className={`dock-item ${activeTab === 'database' ? 'active' : ''}`} onClick={() => { setActiveTab('database'); setShowAddForm(false); }}>
+          <button className={`dock-item ${activeTab === 'database' ? 'active' : ''}`} onClick={() => { setPinTarget('database'); }}>
             <DbIcon size={20} />
           </button>
         </div>
@@ -249,6 +252,19 @@ function App() {
 
       {selectedSong && (
         <SongModal song={selectedSong} onClose={() => setSelectedSong(null)} />
+      )}
+
+      {pinTarget && (
+        <PinLock onCorrect={() => {
+          if (pinTarget === 'add') {
+            setEditingSong(null);
+            setShowAddForm(true);
+          } else if (pinTarget === 'database') {
+            setActiveTab('database');
+            setShowAddForm(false);
+          }
+          setPinTarget(null);
+        }} />
       )}
     </div>
   );
