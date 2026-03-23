@@ -164,61 +164,55 @@ function App() {
       <main className="content-area">
         {loading && <p style={{ textAlign: 'center', color: '#888', padding: '40px' }}>Loading from cloud...</p>}
 
-        {!loading && activeTab === 'library' && (
-          <div className="library-view">
-            <div className="search-bar-container">
-              <div className="search-pill">
-                <SearchIcon size={18} className="search-icon" />
-                <input
-                  type="text"
-                  placeholder="Search songs or tags..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+        <div style={{ display: (!loading && activeTab === 'library') ? 'block' : 'none' }}>
+          <div className="search-bar-container">
+            <div className="search-pill">
+              <SearchIcon size={18} className="search-icon" />
+              <input
+                type="text"
+                placeholder="Search songs or tags..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="song-grid">
+            {filtered.map(s => (
+              <SongCard key={s.id} song={s} onClick={() => setSelectedSong(s)} />
+            ))}
+          </div>
+        </div>
+
+        <div className="db-list" style={{ display: (!loading && activeTab === 'database') ? 'flex' : 'none' }}>
+          {songs.map((s) => (
+            <div
+              key={s.id}
+              className="db-item"
+              draggable
+              onDragStart={(e) => handleDragStart(e, s.id)}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, s.id)}
+            >
+              <div className="db-item-content">
+                <div className="drag-handle">
+                  <GripVertical size={18} />
+                </div>
+                <div className="db-info">
+                  <h3>{s.title}</h3>
+                  <span>{s.scale}</span>
+                </div>
+              </div>
+              <div className="db-item-actions">
+                <button className="icon-btn edit-btn" onClick={() => { setEditingSong(s); setShowAddForm(true); }}>
+                  <Edit2 size={16} />
+                </button>
+                <button className="icon-btn delete-btn" onClick={() => deleteSong(s.id)}>
+                  <Trash2 size={16} />
+                </button>
               </div>
             </div>
-            <div className="song-grid">
-              {filtered.map(s => (
-                <SongCard key={s.id} song={s} onClick={() => setSelectedSong(s)} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {!loading && activeTab === 'database' && (
-          <div className="database-view">
-            <div className="db-list">
-              {songs.map((s) => (
-                <div
-                  key={s.id}
-                  className="db-item"
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, s.id)}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, s.id)}
-                >
-                  <div className="db-item-content">
-                    <div className="drag-handle">
-                      <GripVertical size={18} />
-                    </div>
-                    <div className="db-info">
-                      <h3>{s.title}</h3>
-                      <span>{s.scale}</span>
-                    </div>
-                  </div>
-                  <div className="db-item-actions">
-                    <button className="icon-btn edit-btn" onClick={() => { setEditingSong(s); setShowAddForm(true); }}>
-                      <Edit2 size={16} />
-                    </button>
-                    <button className="icon-btn delete-btn" onClick={() => deleteSong(s.id)}>
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+          ))}
+        </div>
       </main>
 
       <nav className="floating-dock-container">
