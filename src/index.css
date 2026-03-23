@@ -4,3 +4,14 @@ body {
   padding: 0;
   background: #000;
 }
+
+/* CRITICAL: React wraps everything in #root, which sits between body and .app-container.
+   Without explicit sizing, body's display:flex causes #root to shrink based on content,
+   which is the "thinning" bug. This makes #root behave as if .app-container is body's direct child. */
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
