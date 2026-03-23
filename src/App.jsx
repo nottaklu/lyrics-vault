@@ -165,7 +165,7 @@ function App() {
         {loading && <p style={{ textAlign: 'center', color: '#888', padding: '40px' }}>Loading from cloud...</p>}
 
         {!loading && activeTab === 'library' && (
-          <div className="library-view fade-in">
+          <div className="library-view">
             <div className="search-bar-container">
               <div className="search-pill">
                 <SearchIcon size={18} className="search-icon" />
@@ -186,7 +186,7 @@ function App() {
         )}
 
         {!loading && activeTab === 'database' && (
-          <div className="database-view fade-in">
+          <div className="database-view">
             <div className="db-list">
               {songs.map((s) => (
                 <div
