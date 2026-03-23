@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Library, Plus, Search as SearchIcon, Database as DbIcon, Edit2, Trash2, GripVertical } from 'lucide-react';
+import { Library, Plus, Search as SearchIcon, Database as DbIcon, Edit2, Trash2, GripVertical, Sun, Moon } from 'lucide-react';
 import SongCard from './components/SongCard';
 import SongModal from './components/SongModal';
 import SongForm from './components/SongForm';
@@ -16,6 +16,13 @@ function App() {
   const [activeTab, setActiveTab] = useState('library');
   const [ghToken, setGhToken] = useState(githubService.getToken());
   const [loading, setLoading] = useState(true);
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    localStorage.setItem('theme', next);
+  };
 
   // Load songs from GitHub only
   const loadSongs = async () => {
@@ -156,9 +163,12 @@ function App() {
   }
 
   return (
-    <div className="app-container">
+    <div className="app-container" data-theme={theme}>
       <header className="app-header">
         <h1>{activeTab === 'database' ? 'Database' : 'Lyrics'}</h1>
+        <button className="theme-toggle" onClick={toggleTheme}>
+          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
       </header>
 
       <main className="content-area">
