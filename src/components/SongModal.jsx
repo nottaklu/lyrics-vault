@@ -9,7 +9,10 @@ const SongModal = ({ song, onClose }) => {
       <div className="modal-content" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <span style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: '700' }}>{song.scale}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              {song.scale && <span style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: '700' }}>{song.scale}</span>}
+              {song.chords && <span style={{ fontSize: '12px', color: 'var(--text-dim)', fontWeight: '500' }}>{song.chords}</span>}
+            </div>
             <h2 style={{ marginTop: '4px', fontSize: '24px' }}>{song.title}</h2>
           </div>
           <button className="modal-close-btn" onClick={onClose}>
@@ -17,7 +20,7 @@ const SongModal = ({ song, onClose }) => {
           </button>
         </div>
         <div className="modal-body">
-          <pre className="lyrics-text">{song.lyrics}</pre>
+          <pre className="lyrics-text" dangerouslySetInnerHTML={{ __html: song.lyrics }} />
         </div>
       </div>
     </div>

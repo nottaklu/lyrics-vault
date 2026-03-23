@@ -172,9 +172,9 @@ function App() {
       </header>
 
       <main className="content-area">
-        {loading && <p style={{ textAlign: 'center', color: '#888', padding: '40px' }}>Loading from cloud...</p>}
+        {loading && <div className="top-loader-bar"></div>}
 
-        <div style={{ display: (!loading && activeTab === 'library') ? 'block' : 'none' }}>
+        <div style={{ display: (activeTab === 'library') ? 'block' : 'none' }}>
           <div className="search-bar-container">
             <div className="search-pill">
               <SearchIcon size={18} className="search-icon" />
@@ -193,7 +193,7 @@ function App() {
           </div>
         </div>
 
-        <div className="db-list" style={{ display: (!loading && activeTab === 'database') ? 'flex' : 'none' }}>
+        <div className="db-list" style={{ display: (activeTab === 'database') ? 'flex' : 'none' }}>
           {songs.map((s) => (
             <div
               key={s.id}

@@ -30,6 +30,7 @@
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideInUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
 body { background-color: #050505; color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; height: 100vh; height: 100dvh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
@@ -63,6 +64,19 @@ body:has([data-theme="light"]) { background-color: #F5F2EB; color: #1a1a1a; }
 .content-area {
     flex: 1; padding: 10px 20px 100px; overflow-y: auto; overflow-x: hidden; scrollbar-width: none;
     min-height: 0; /* critical for flex scroll */
+    position: relative;
+}
+
+/* Elegant Top Loader */
+.top-loader-bar {
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--accent); z-index: 1000;
+    overflow: hidden;
+}
+.top-loader-bar::after {
+    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    animation: shimmer 1.5s infinite;
 }
 .content-area::-webkit-scrollbar { display: none; }
 
@@ -155,10 +169,28 @@ body:has([data-theme="light"]) { background-color: #F5F2EB; color: #1a1a1a; }
 
 .form-group { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
 .form-group label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-dim); }
-.form-group input, .form-group textarea {
+.form-group input, .form-group textarea, .lyrics-editable {
     background: var(--glass); border: 1px solid var(--border); border-radius: 12px; padding: 14px; color: var(--text); font-size: 16px; outline: none; font-family: inherit;
 }
-.form-group textarea { height: 200px; font-family: 'Fira Code', monospace; resize: none; }
+.form-group textarea, .lyrics-editable { height: 200px; font-family: 'Fira Code', monospace; resize: none; overflow-y: auto; }
+
+.lyrics-editable:empty:before {
+    content: attr(data-placeholder);
+    color: var(--text-dim);
+    pointer-events: none;
+}
+
+/* Lyrics Toolbar */
+.lyrics-toolbar {
+    display: flex; gap: 8px; margin-bottom: 8px;
+}
+.lyrics-toolbar button {
+    background: var(--glass); border: 1px solid var(--border); color: var(--text);
+    width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: background 0.2s;
+}
+.lyrics-toolbar button:hover { background: rgba(255,255,255,0.15); }
+.lyrics-toolbar button:active { opacity: 0.6; }
 
 .save-btn { 
     background: var(--accent); color: white; padding: 18px; border-radius: 16px; border: none; 

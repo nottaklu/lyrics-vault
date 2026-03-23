@@ -1,13 +1,23 @@
-import React, { useState } from 'react';
-import { X, Save } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { X, Save, Bold, Palette } from 'lucide-react';
 
 const SongForm = ({ onSave, onCancel, initialData }) => {
-  const [formData, setFormData] = useState(initialData || {
-    title: '',
-    scale: '',
-    keywords: '',
-    lyrics: ''
+  const [formData, setFormData] = useState({
+    title: initialData?.title || '',
+    scale: initialData?.scale || '',
+    chords: initialData?.chords || '',
+    keywords: initialData?.keywords || '',
+    lyrics: initialData?.lyrics || ''
   });
+
+  const lyricsRef = useRef(null);
+  const [lyricsHtml, setLyricsHtml] = useState(initialData?.lyrics || '');
+
+  useEffect(() => {
+    if (lyricsRef.current && lyricsHtml) {
+      lyricsRef.current.innerHTML = lyricsHtml;
+    }
+  }, []);
 
   const keywordsInitial = Array.isArray(initialData?.keywords) 
     ? initialData.keywords.join(', ') 
@@ -23,8 +33,10 @@ const SongForm = ({ onSave, onCancel, initialData }) => {
       ? keywordsDisplay.split(',').map(k => k.trim()).filter(k => k !== '')
       : [];
 
+    const currentLyrics = lyricsRef.current ? lyricsRef.current.innerHTML : formData.lyrics;
     onSave({
       ...formData,
+      lyrics: currentLyrics,
       keywords: keywordsArray
     });
   };
@@ -60,6 +72,15 @@ const SongForm = ({ onSave, onCancel, initialData }) => {
               />
             </div>
             <div className="form-group">
+              <label>Chords</label>
+              <input 
+                type="text" 
+                value={formData.chords}
+                onChange={e => setFormData({...formData, chords: e.target.value})}
+                placeholder="e.g. A# - A C Em D"
+              />
+            </div>
+            <div className="form-group">
               <label>Keywords</label>
               <input 
                 type="text" 
@@ -70,11 +91,30 @@ const SongForm = ({ onSave, onCancel, initialData }) => {
             </div>
             <div className="form-group">
               <label>Lyrics</label>
-              <textarea 
-                value={formData.lyrics}
-                onChange={e => setFormData({...formData, lyrics: e.target.value})}
-                placeholder="Paste lyrics here..."
-              ></textarea>
+              <div className="lyrics-toolbar">
+                <button type="button" title="Bold" onMouseDown={e => { e.preventDefault(); document.execCommand('bold'); }}>
+                  <Bold size={16} />
+                </button>
+                <button type="button" title="Blue" onMouseDown={e => {
+                  e.preventDefault();
+                  const sel = window.getSelection();
+                  if (!sel.rangeCount || sel.isCollapsed) return;
+                  const range = sel.getRangeAt(0);
+                  const span = document.createElement('span');
+                  span.style.color = '#007AFF';
+                  range.surroundContents(span);
+                }}>
+                  <Palette size={16} />
+                </button>
+              </div>
+              <div
+                ref={lyricsRef}
+                className="lyrics-editable"
+                contentEditable
+                suppressContentEditableWarning
+                data-placeholder="Paste lyrics here..."
+                onInput={() => setLyricsHtml(lyricsRef.current.innerHTML)}
+              />
             </div>
             <button type="submit" className="save-btn">
               <Save size={20} />
