@@ -13,28 +13,29 @@
 
 /* Light mode theme */
 [data-theme="light"] {
-    --accent: #5B7A3A;
-    --bg: #F0EDE5;
-    --glass: rgba(0, 0, 0, 0.04);
-    --border: rgba(0, 0, 0, 0.08);
+    --accent: #4A6B2A;
+    --bg: #F5F2EB;
+    --glass: rgba(0, 0, 0, 0.05);
+    --border: rgba(0, 0, 0, 0.10);
     --text: #1a1a1a;
-    --text-dim: #6b6b6b;
-    --card-bg: rgba(0, 0, 0, 0.04);
-    --search-bg: rgba(0, 0, 0, 0.04);
-    --dock-bg: #e8e4dc;
-    --modal-bg: #F0EDE5;
+    --text-dim: #555;
+    --card-bg: #DDD7C9;
+    --search-bg: #E5DFD3;
+    --dock-bg: #DBD5C8;
+    --modal-bg: #F5F2EB;
+    --card-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideInUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
-body { background-color: #050505; color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; min-height: 100vh; display: flex; justify-content: center; align-items: center; }
+body { background-color: #050505; color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; height: 100vh; height: 100dvh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
 [data-theme="light"] body, body:has([data-theme="light"]) { background-color: #E8E4DC; }
 
 .app-container {
-    width: 100%; max-width: 440px; height: 100vh; height: 100dvh; background: var(--bg); position: relative;
-    display: flex; flex-direction: column; overflow: hidden; animation: fadeIn 0.4s ease;
+    width: 100%; max-width: 440px; height: 100%; background: var(--bg); position: relative;
+    display: flex; flex-direction: column; overflow: hidden; overflow-x: hidden; animation: fadeIn 0.4s ease;
 }
 
 @media (min-width: 600px) {
@@ -80,8 +81,9 @@ body { background-color: #050505; color: var(--text); font-family: 'Plus Jakarta
     border-radius: 24px; padding: 20px; height: 160px; display: flex; flex-direction: column; justify-content: space-between;
     cursor: pointer; transition: all 0.2s; overflow: hidden; min-width: 0;
 }
+[data-theme="light"] .song-card { box-shadow: var(--card-shadow); backdrop-filter: none; -webkit-backdrop-filter: none; }
 .song-card:active { transform: scale(0.96); background: rgba(255,255,255,0.15); }
-[data-theme="light"] .song-card:active { background: rgba(0,0,0,0.08); }
+[data-theme="light"] .song-card:active { background: #CFC9BB; }
 .song-card-scale { font-size: 13px; color: var(--accent); font-weight: 600; }
 .song-card-title { font-size: 18px; font-weight: 600; line-height: 1.2; margin: 4px 0; color: var(--text); overflow: hidden; text-overflow: ellipsis; word-break: break-word; }
 
@@ -95,6 +97,7 @@ body { background-color: #050505; color: var(--text); font-family: 'Plus Jakarta
     background: var(--card-bg); border: 1px solid var(--border); padding: 12px 16px; border-radius: 20px;
     display: flex; justify-content: space-between; align-items: center; cursor: default; overflow: hidden;
 }
+[data-theme="light"] .db-item { box-shadow: var(--card-shadow); }
 .db-item.dragging { opacity: 0.5; border: 1px dashed var(--accent); }
 .drag-handle { cursor: grab; color: var(--text-dim); padding-right: 12px; display: flex; align-items: center; flex-shrink: 0; }
 .drag-handle:active { cursor: grabbing; }
