@@ -82,5 +82,18 @@
     "id": 1774249660149,
     "order": 6,
     "createdAt": "2026-03-23T07:07:40.149Z"
+  },
+  {
+    "title": "Musafari ",
+    "scale": "G Sharp",
+    "chords": "G CD",
+    "keywords": [
+      "Fast",
+      "C"
+    ],
+    "lyrics": "Musafari",
+    "id": 1774539937169,
+    "order": 7,
+    "createdAt": "2026-03-26T15:45:37.169Z"
   }
 ]
