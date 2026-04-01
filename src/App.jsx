@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Library, Plus, Search as SearchIcon, Database as DbIcon, Edit2, Trash2, GripVertical, Sun, Moon, Music2 } from 'lucide-react';
+import { Library, Search as SearchIcon, Database as DbIcon, Edit2, Trash2, GripVertical, Sun, Moon, Music2, Check } from 'lucide-react';
 import SongCard from './components/SongCard';
 import ScaleCard from './components/ScaleCard';
 import SongModal from './components/SongModal';
@@ -143,7 +143,10 @@ function App() {
   const [pinTarget, setPinTarget] = useState(null);
   const [playingScaleId, setPlayingScaleId] = useState(null);
   const [pendingScaleId, setPendingScaleId] = useState(null);
+  const [notesContent, setNotesContent] = useState(localStorage.getItem('notes_content') || '');
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
   const audioRef = useRef(null);
+  const notesTextareaRef = useRef(null);
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
@@ -204,6 +207,23 @@ function App() {
       stopScaleAudio();
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== 'notes') {
+      setIsEditingNotes(false);
+      notesTextareaRef.current?.blur();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    localStorage.setItem('notes_content', notesContent);
+  }, [notesContent]);
+
+  useEffect(() => {
+    if (activeTab === 'notes' && isEditingNotes) {
+      notesTextareaRef.current?.focus();
+    }
+  }, [activeTab, isEditingNotes]);
 
   // Save: update songs.json on GitHub directly
   const handleSaveSong = async (data) => {
@@ -344,11 +364,14 @@ function App() {
     };
   });
 
-  const dockActiveTab = showAddForm || pinTarget === 'add'
-    ? 'add'
-    : pinTarget === 'database'
-      ? 'database'
+  const dockActiveTab = pinTarget === 'database' || pinTarget === 'database-add'
+    ? 'database'
       : activeTab;
+
+  const handleNotesDone = () => {
+    setIsEditingNotes(false);
+    notesTextareaRef.current?.blur();
+  };
 
   const handleScaleAudioToggle = (scale, { forcePlay = false } = {}) => {
     if (!scale.audioUrl) return;
@@ -412,13 +435,19 @@ function App() {
   return (
     <div className="app-container" data-theme={theme}>
       <header className="app-header">
-        <h1>{activeTab === 'database' ? 'Database' : activeTab === 'scales' ? 'Scales' : 'Lyrics'}</h1>
-        <button className="theme-toggle" onClick={toggleTheme}>
-          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-        </button>
+        <h1>{activeTab === 'database' ? 'Database' : activeTab === 'scales' ? 'Scales' : activeTab === 'notes' ? 'Notes' : 'Lyrics'}</h1>
+        {activeTab === 'notes' && isEditingNotes ? (
+          <button className="theme-toggle" onClick={handleNotesDone} aria-label="Done editing notes">
+            <Check size={18} />
+          </button>
+        ) : (
+          <button className="theme-toggle" onClick={toggleTheme}>
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+        )}
       </header>
 
-      <main className="content-area">
+      <main className={`content-area ${activeTab === 'notes' ? 'notes-mode' : ''}`}>
         {loading && <div className="top-loader-bar"></div>}
 
         <div style={{ display: (activeTab === 'library') ? 'block' : 'none' }}>
@@ -466,7 +495,24 @@ function App() {
           </div>
         </div>
 
-        <div className="db-list" style={{ display: (activeTab === 'database') ? 'flex' : 'none' }}>
+        <div className="db-view" style={{ display: (activeTab === 'database') ? 'flex' : 'none' }}>
+          <div className="db-toolbar">
+            <button
+              className="db-add-song-btn"
+              onClick={() => {
+                if (isUnlocked) {
+                  setEditingSong(null);
+                  setShowAddForm(true);
+                  setPinTarget(null);
+                  return;
+                }
+                setPinTarget('database-add');
+              }}
+            >
+              Add a New Song
+            </button>
+          </div>
+          <div className="db-list">
           {songs.map((s) => (
             <div
               key={s.id}
@@ -495,6 +541,26 @@ function App() {
               </div>
             </div>
           ))}
+          </div>
+        </div>
+
+        <div className="notes-screen" style={{ display: (activeTab === 'notes') ? 'flex' : 'none' }}>
+          <div className={`notes-sheet ${isEditingNotes ? 'is-editing' : ''}`}>
+            <textarea
+              ref={notesTextareaRef}
+              className="notes-editor"
+              value={notesContent}
+              onChange={(e) => setNotesContent(e.target.value)}
+              onFocus={() => setIsEditingNotes(true)}
+              placeholder="Start writing your notes..."
+              readOnly={!isEditingNotes}
+              onClick={() => {
+                if (!isEditingNotes) {
+                  setIsEditingNotes(true);
+                }
+              }}
+            />
+          </div>
         </div>
       </main>
 
@@ -505,20 +571,6 @@ function App() {
           </button>
           <button className={`dock-item ${dockActiveTab === 'scales' ? 'active' : ''}`} onClick={() => { setPinTarget(null); setActiveTab('scales'); setShowAddForm(false); }}>
             <Music2 size={20} />
-          </button>
-          <button
-            className={`dock-item ${dockActiveTab === 'add' ? 'active' : ''}`}
-            onClick={() => {
-              if (isUnlocked) {
-                setEditingSong(null);
-                setShowAddForm(true);
-                setPinTarget(null);
-                return;
-              }
-              setPinTarget('add');
-            }}
-          >
-            <Plus size={20} />
           </button>
           <button
             className={`dock-item ${dockActiveTab === 'database' ? 'active' : ''}`}
@@ -533,6 +585,16 @@ function App() {
             }}
           >
             <DbIcon size={20} />
+          </button>
+          <button
+            className={`dock-item ${dockActiveTab === 'notes' ? 'active' : ''}`}
+            onClick={() => {
+              setPinTarget(null);
+              setShowAddForm(false);
+              setActiveTab('notes');
+            }}
+          >
+            <Edit2 size={20} />
           </button>
         </div>
       </nav>
@@ -578,12 +640,13 @@ function App() {
       {pinTarget && (
         <PinLock onCorrect={() => {
           setIsUnlocked(true);
-          if (pinTarget === 'add') {
-            setEditingSong(null);
-            setShowAddForm(true);
-          } else if (pinTarget === 'database') {
+          if (pinTarget === 'database') {
             setActiveTab('database');
             setShowAddForm(false);
+          } else if (pinTarget === 'database-add') {
+            setActiveTab('database');
+            setEditingSong(null);
+            setShowAddForm(true);
           }
           setPinTarget(null);
         }} />
