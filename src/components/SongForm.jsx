@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Save, Bold, Palette } from 'lucide-react';
 
+const normalizeLyricsHtml = (value) => String(value || '')
+  .replace(/color:\s*(?!#007aff|#007AFF|rgb\(0,\s*122,\s*255\)|rgba\(0,\s*122,\s*255,\s*1\))[^;"']+;?/gi, '');
+
 const SongForm = ({ onSave, onCancel, initialData }) => {
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
@@ -15,7 +18,7 @@ const SongForm = ({ onSave, onCancel, initialData }) => {
 
   useEffect(() => {
     if (lyricsRef.current && lyricsHtml) {
-      lyricsRef.current.innerHTML = lyricsHtml;
+      lyricsRef.current.innerHTML = normalizeLyricsHtml(lyricsHtml);
     }
   }, []);
 
@@ -33,7 +36,7 @@ const SongForm = ({ onSave, onCancel, initialData }) => {
       ? keywordsDisplay.split(',').map(k => k.trim()).filter(k => k !== '')
       : [];
 
-    const currentLyrics = lyricsRef.current ? lyricsRef.current.innerHTML : formData.lyrics;
+    const currentLyrics = lyricsRef.current ? normalizeLyricsHtml(lyricsRef.current.innerHTML) : formData.lyrics;
     onSave({
       ...formData,
       lyrics: currentLyrics,
@@ -97,12 +100,10 @@ const SongForm = ({ onSave, onCancel, initialData }) => {
                 </button>
                 <button type="button" title="Blue" onMouseDown={e => {
                   e.preventDefault();
-                  const sel = window.getSelection();
-                  if (!sel.rangeCount || sel.isCollapsed) return;
-                  const range = sel.getRangeAt(0);
-                  const span = document.createElement('span');
-                  span.style.color = '#007AFF';
-                  range.surroundContents(span);
+                  lyricsRef.current?.focus();
+                  document.execCommand('styleWithCSS', false, true);
+                  document.execCommand('foreColor', false, '#007AFF');
+                  setLyricsHtml(normalizeLyricsHtml(lyricsRef.current?.innerHTML || ''));
                 }}>
                   <Palette size={16} />
                 </button>
@@ -113,7 +114,7 @@ const SongForm = ({ onSave, onCancel, initialData }) => {
                 contentEditable
                 suppressContentEditableWarning
                 data-placeholder="Paste lyrics here..."
-                onInput={() => setLyricsHtml(lyricsRef.current.innerHTML)}
+                onInput={() => setLyricsHtml(normalizeLyricsHtml(lyricsRef.current.innerHTML))}
               />
             </div>
             <button type="submit" className="save-btn">
