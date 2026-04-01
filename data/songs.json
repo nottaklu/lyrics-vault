@@ -1,5 +1,16 @@
 [
   {
+    "title": "Taro Sathvaro",
+    "scale": "C Major",
+    "keywords": [
+      "Slow"
+    ],
+    "lyrics": "Taro ne maro, sambandh nyaro,\nMane yaad avashe, taro sathvaro\n\nTara roop upar hu, o vaari jaau,\nTara gunonthi, anjai jaau,\nBas tagar magar thai, hu jovu tujne,\nJad aakhi duniya, mali gai mujne\nDubato hato ne, malyo kinaro\nMane yaad avashe, taro sathvaro\n\nTara milannani, je kshano hati aa,\nMuj janmara ni, shubh palo hati aa,\nE kshano hruday ma, kandaari lidhi me,\nAatamni sheri, shangaari lidhi me,\nVasamo dhano chhe, aa viyog taro\nMane yaad avashe, taro sathvaro",
+    "id": 1774196055150,
+    "order": 0,
+    "createdAt": "2026-03-22T16:14:15.150Z"
+  },
+  {
     "title": "Rome Rome Girnar",
     "scale": "A Major",
     "keywords": [
@@ -8,7 +19,7 @@
     ],
     "lyrics": "Nem nem nem nem nem\nNem nem nem vhaala nem..(2)\nMara rome tun girnar, mara shvaase tun neminath..(2)\nMaro aadhaar tun, moksh daatar tun...\nMaro sathvaar tun, maro pagathar tun...\nMukti tanun sarnamun tun, haiyaano dhabkar tun...\nRome rome girnar gunje shvaase shvaase\nShvaase shvaase neminath biraje rome rome...",
     "id": 1774249479071,
-    "order": 0,
+    "order": 1,
     "createdAt": "2026-03-23T07:04:39.071Z"
   },
   {
@@ -20,19 +31,8 @@
     ],
     "lyrics": "Sarv svikarni sanyam yatra, saadi anant chhe vire kahi,\nBhav bhamanoni yatra no to, ant chhe anant nahi...\nHun kaheto nathi sansare dukh, pan shaashvat sukh no ansh nahi,\nBhav bhamanoni yatra no to, ant chhe anant nahi...\nPaisa pachhal bhav jase, saath na aavse pai,\nSvarth bharela sambandho chhe, prabhu sang karile sagai.\nTun bhav ananta kari aavyo, tun nashvar deh pachhal bhaagyo,\nJeevanma sukh je kotare chhe, mrugajal bani te chhetare chhe,\nKem man mandir taaru khaali chhe? Kem khaali aatam? Sukh nahi,\nBhav bhamanoni yatra no, to ant chhe anant nahi...\nHun kaheto nathi sansare dukh, pan shaashvat sukh no ansh nahi,\nBhav bhamanoni yatra no to, ant chhe anant nahi...\nNemi nun bas naam jape, banse nem jem e man mere,\nDeh thi anjan chhe man ranjan, chhodya ene dhan kanchan,\nAa nemi to girnari chhe, ene raajul raani taari chhe,\nVali pashuone pan ugaari re, eto paamya shivvadhu pyaari re,\nPunya nahi jose e tarun, bas man pavitra chhe ke nahi,\nBhav bhamanoni yatra no to, ant chhe anant nahi...",
     "id": 1774249428935,
-    "order": 1,
-    "createdAt": "2026-03-23T07:03:48.935Z"
-  },
-  {
-    "title": "Taro Sathvaro",
-    "scale": "C Major",
-    "keywords": [
-      "Slow"
-    ],
-    "lyrics": "Taro ne maro, sambandh nyaro,\nMane yaad avashe, taro sathvaro\n\nTara roop upar hu, o vaari jaau,\nTara gunonthi, anjai jaau,\nBas tagar magar thai, hu jovu tujne,\nJad aakhi duniya, mali gai mujne\nDubato hato ne, malyo kinaro\nMane yaad avashe, taro sathvaro\n\nTara milannani, je kshano hati aa,\nMuj janmara ni, shubh palo hati aa,\nE kshano hruday ma, kandaari lidhi me,\nAatamni sheri, shangaari lidhi me,\nVasamo dhano chhe, aa viyog taro\nMane yaad avashe, taro sathvaro",
-    "id": 1774196055150,
     "order": 2,
-    "createdAt": "2026-03-22T16:14:15.150Z"
+    "createdAt": "2026-03-23T07:03:48.935Z"
   },
   {
     "title": "Rajpath Mashup",
