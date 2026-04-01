@@ -10,7 +10,8 @@ const ScaleCard = ({ scale, isPlaying, onAudioToggle, onTransposeOpen }) => {
       </div>
 
       <div className="scale-card-body">
-        <h3 className="song-card-title">{scale.label}</h3>
+        <h3 className="song-card-title">{scale.shortLabel}</h3>
+        <p className="scale-note-label">{scale.noteLabel}</p>
       </div>
 
       <div className="scale-card-actions">

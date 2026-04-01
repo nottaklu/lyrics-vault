@@ -70,30 +70,7 @@ const SCALE_AUDIO_MAP = {
   'F-minor': '/lyrics-vault/audio/scales/F-minor.mp3'
 };
 
-const SCALES = SCALE_ROOTS.flatMap((root) => ([
-  {
-    id: `${root}-major`,
-    root,
-    type: 'Major',
-    label: `${root} Major / ${SCALE_NOTE_NAMES[root]}`,
-    shortLabel: `${root} Major`,
-    transposeRoot: root,
-    searchTerms: [root, 'major', `${root} major scale`, `${root} ionian`],
-    audioUrl: SCALE_AUDIO_MAP[`${root}-major`] || null
-  },
-  {
-    id: `${root}-minor`,
-    root,
-    type: 'Minor',
-    label: `${root} Minor / ${SCALE_NOTE_NAMES[CHROMATIC_NOTES[(CHROMATIC_NOTES.indexOf(root) + 3) % CHROMATIC_NOTES.length]]}`,
-    shortLabel: `${root} Minor`,
-    transposeRoot: CHROMATIC_NOTES[(CHROMATIC_NOTES.indexOf(root) + 3) % CHROMATIC_NOTES.length],
-    searchTerms: [root, 'minor', `${root} minor scale`, `${root} aeolian`],
-    audioUrl: SCALE_AUDIO_MAP[`${root}-minor`] || null
-  }
-]));
-
-const getScaleChords = (root) => {
+function getScaleChords(root) {
   const rootIndex = CHROMATIC_NOTES.indexOf(root);
   if (rootIndex === -1) return [];
 
@@ -103,7 +80,34 @@ const getScaleChords = (root) => {
     if (index === 6) return `${note}dim`;
     return note;
   });
-};
+}
+
+const SCALES = SCALE_ROOTS.flatMap((root) => ([
+  {
+    id: `${root}-major`,
+    root,
+    type: 'Major',
+    label: `${root} Major / ${SCALE_NOTE_NAMES[root]}`,
+    shortLabel: `${root} Major`,
+    noteLabel: SCALE_NOTE_NAMES[root],
+    transposeRoot: root,
+    searchTerms: [root, 'major', `${root} major scale`, `${root} ionian`, ...getScaleChords(root), getScaleChords(root).join(' ')],
+    audioUrl: SCALE_AUDIO_MAP[`${root}-major`] || null
+  },
+  {
+    id: `${root}-minor`,
+    root,
+    type: 'Minor',
+    label: `${root} Minor / ${SCALE_NOTE_NAMES[CHROMATIC_NOTES[(CHROMATIC_NOTES.indexOf(root) + 3) % CHROMATIC_NOTES.length]]}`,
+    shortLabel: `${root} Minor`,
+    noteLabel: SCALE_NOTE_NAMES[CHROMATIC_NOTES[(CHROMATIC_NOTES.indexOf(root) + 3) % CHROMATIC_NOTES.length]],
+    transposeRoot: CHROMATIC_NOTES[(CHROMATIC_NOTES.indexOf(root) + 3) % CHROMATIC_NOTES.length],
+    searchTerms: [root, 'minor', `${root} minor scale`, `${root} aeolian`, ...getScaleChords(CHROMATIC_NOTES[(CHROMATIC_NOTES.indexOf(root) + 3) % CHROMATIC_NOTES.length]), getScaleChords(CHROMATIC_NOTES[(CHROMATIC_NOTES.indexOf(root) + 3) % CHROMATIC_NOTES.length]).join(' ')],
+    audioUrl: SCALE_AUDIO_MAP[`${root}-minor`] || null
+  }
+]));
+
+const C_FAMILY_SIGNATURE = getScaleChords('C').join(' ');
 
 const normalizeScaleId = (scaleText) => {
   const normalized = normalizeSearchText(scaleText).replace(/\s+/g, ' ');
@@ -332,9 +336,11 @@ function App() {
     const selectedRoot = transposeScale?.transposeRoot || 'C';
     const rootIndex = CHROMATIC_NOTES.indexOf(selectedRoot);
     const transposedRoot = CHROMATIC_NOTES[(rootIndex + row.shift + CHROMATIC_NOTES.length * 10) % CHROMATIC_NOTES.length];
+    const chords = getScaleChords(transposedRoot);
     return {
       ...row,
-      chords: getScaleChords(transposedRoot)
+      chords,
+      isMatch: chords.join(' ') === C_FAMILY_SIGNATURE
     };
   });
 
@@ -558,7 +564,7 @@ function App() {
             <div className="modal-body">
               <div className="transpose-table">
                 {transposeRows.map((row) => (
-                  <div key={row.label} className="transpose-row">
+                  <div key={row.label} className={`transpose-row ${row.isMatch ? 'is-match' : ''}`}>
                     <div className="transpose-label">{row.label}</div>
                     <div className="transpose-chords">{row.chords.join(' ')}</div>
                   </div>
