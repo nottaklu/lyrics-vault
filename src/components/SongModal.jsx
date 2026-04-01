@@ -1,7 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 
-const SongModal = ({ song, onClose }) => {
+const SongModal = ({ song, onClose, onScaleClick }) => {
   if (!song) return null;
 
   return (
@@ -10,7 +10,15 @@ const SongModal = ({ song, onClose }) => {
         <div className="modal-header">
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-              {song.scale && <span style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: '700' }}>{song.scale}</span>}
+              {song.scale && (
+                <button
+                  type="button"
+                  className="modal-scale-link"
+                  onClick={() => onScaleClick?.(song.scale)}
+                >
+                  {song.scale}
+                </button>
+              )}
               {song.chords && <span style={{ fontSize: '12px', color: 'var(--text-dim)', fontWeight: '500' }}>{song.chords}</span>}
             </div>
             <h2 style={{ marginTop: '4px', fontSize: '24px' }}>{song.title}</h2>

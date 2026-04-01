@@ -1,9 +1,9 @@
 import React from 'react';
 import { AudioLines } from 'lucide-react';
 
-const ScaleCard = ({ scale, isPlaying, onAudioToggle }) => {
+const ScaleCard = ({ scale, isPlaying, onAudioToggle, onTransposeOpen }) => {
   return (
-    <div className="song-card scale-card">
+    <div id={`scale-card-${scale.id}`} className="song-card scale-card">
       <div className="scale-card-top">
         <span className="song-card-scale">{scale.type}</span>
         <span className="scale-root-pill">{scale.root}</span>
@@ -11,10 +11,17 @@ const ScaleCard = ({ scale, isPlaying, onAudioToggle }) => {
 
       <div className="scale-card-body">
         <h3 className="song-card-title">{scale.label}</h3>
-        <p className="scale-card-subtitle">Base note reference</p>
       </div>
 
-      <div className="mini-pill-row">
+      <div className="scale-card-actions">
+        <button
+          type="button"
+          className="mini-pill scale-audio-pill scale-transpose-button"
+          onClick={onTransposeOpen}
+        >
+          <span>Transpose</span>
+        </button>
+
         {scale.audioUrl ? (
           <button
             type="button"

@@ -13,31 +13,121 @@ const normalizeSearchText = (value) => String(value || '').toLowerCase().trim();
 
 const stripHtml = (value) => String(value || '').replace(/<[^>]*>/g, ' ');
 
+const SCALE_ALIASES = {
+  'a sharp': 'A#',
+  'a#': 'A#',
+  'bb': 'Bb',
+  'b flat': 'Bb',
+  'c sharp': 'C#',
+  'c#': 'C#',
+  'd sharp': 'Eb',
+  'd#': 'Eb',
+  'e flat': 'Eb',
+  'eb': 'Eb',
+  'f sharp': 'F#',
+  'f#': 'F#',
+  'g sharp': 'Ab',
+  'g#': 'Ab',
+  'a flat': 'Ab',
+  'ab': 'Ab'
+};
+
 const SCALE_ROOTS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+const SCALE_NOTE_NAMES = {
+  C: 'Safed 1',
+  'C#': 'Kali 1',
+  D: 'Safed 2',
+  Eb: 'Kali 2',
+  E: 'Safed 3',
+  F: 'Safed 4',
+  'F#': 'Kali 3',
+  G: 'Safed 5',
+  Ab: 'Kali 4',
+  A: 'Safed 6',
+  Bb: 'Kali 5',
+  B: 'Safed 7'
+};
+const CHROMATIC_NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+const MAJOR_PATTERN = [0, 2, 4, 5, 7, 9, 11];
+const TRANSPOSE_ROWS = [
+  { label: 'Open', shift: 0 },
+  { label: 'Capo 1', shift: -1 },
+  { label: 'Capo 2', shift: -2 },
+  { label: 'Capo 3', shift: -3 },
+  { label: 'Capo 4', shift: -4 },
+  { label: 'Capo 5', shift: -5 },
+  { label: 'Capo 6', shift: -6 },
+  { label: 'Capo 7', shift: -7 },
+  { label: 'Capo 8', shift: -8 }
+];
+
+const SCALE_AUDIO_MAP = {
+  'A-major': '/lyrics-vault/audio/scales/A-major.mp3',
+  'C-major': '/lyrics-vault/audio/scales/C-major.mp3',
+  'D-major': '/lyrics-vault/audio/scales/D-major.mp3',
+  'G-major': '/lyrics-vault/audio/scales/G-major.mp3',
+  'D-minor': '/lyrics-vault/audio/scales/D-minor.mp3',
+  'F-minor': '/lyrics-vault/audio/scales/F-minor.mp3'
+};
 
 const SCALES = SCALE_ROOTS.flatMap((root) => ([
   {
     id: `${root}-major`,
     root,
     type: 'Major',
-    label: `${root} Major`,
+    label: `${root} Major / ${SCALE_NOTE_NAMES[root]}`,
+    shortLabel: `${root} Major`,
+    transposeRoot: root,
     searchTerms: [root, 'major', `${root} major scale`, `${root} ionian`],
-    audioUrl: root === 'A' ? '/lyrics-vault/audio/scales/A-major.mp3' : null
+    audioUrl: SCALE_AUDIO_MAP[`${root}-major`] || null
   },
   {
     id: `${root}-minor`,
     root,
     type: 'Minor',
-    label: `${root} Minor`,
+    label: `${root} Minor / ${SCALE_NOTE_NAMES[CHROMATIC_NOTES[(CHROMATIC_NOTES.indexOf(root) + 3) % CHROMATIC_NOTES.length]]}`,
+    shortLabel: `${root} Minor`,
+    transposeRoot: CHROMATIC_NOTES[(CHROMATIC_NOTES.indexOf(root) + 3) % CHROMATIC_NOTES.length],
     searchTerms: [root, 'minor', `${root} minor scale`, `${root} aeolian`],
-    audioUrl: null
+    audioUrl: SCALE_AUDIO_MAP[`${root}-minor`] || null
   }
 ]));
+
+const getScaleChords = (root) => {
+  const rootIndex = CHROMATIC_NOTES.indexOf(root);
+  if (rootIndex === -1) return [];
+
+  return MAJOR_PATTERN.map((step, index) => {
+    const note = CHROMATIC_NOTES[(rootIndex + step + CHROMATIC_NOTES.length) % CHROMATIC_NOTES.length];
+    if (index === 1 || index === 2 || index === 5) return `${note}m`;
+    if (index === 6) return `${note}dim`;
+    return note;
+  });
+};
+
+const normalizeScaleId = (scaleText) => {
+  const normalized = normalizeSearchText(scaleText).replace(/\s+/g, ' ');
+  if (!normalized) return null;
+
+  const type = normalized.includes('minor') ? 'minor' : 'major';
+  const rootText = normalized
+    .replace('major', '')
+    .replace('minor', '')
+    .trim();
+
+  const root = SCALE_ALIASES[rootText] || rootText
+    .split(' ')
+    .map((part) => part ? part[0].toUpperCase() + part.slice(1) : part)
+    .join(' ');
+
+  return `${root}-${type}`;
+};
 
 function App() {
   const [songs, setSongs] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [scaleSearchQuery, setScaleSearchQuery] = useState('');
+  const [transposeScale, setTransposeScale] = useState(null);
   const [selectedSong, setSelectedSong] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingSong, setEditingSong] = useState(null);
@@ -45,8 +135,10 @@ function App() {
   const [ghToken, setGhToken] = useState(githubService.getToken());
   const [loading, setLoading] = useState(true);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
-  const [pinTarget, setPinTarget] = useState(null); // 'database' or 'add'
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [pinTarget, setPinTarget] = useState(null);
   const [playingScaleId, setPlayingScaleId] = useState(null);
+  const [pendingScaleId, setPendingScaleId] = useState(null);
   const audioRef = useRef(null);
 
   const toggleTheme = () => {
@@ -79,6 +171,13 @@ function App() {
   }, [ghToken]);
 
   useEffect(() => {
+    if (!ghToken) {
+      setIsUnlocked(false);
+      setPinTarget(null);
+    }
+  }, [ghToken]);
+
+  useEffect(() => {
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -86,6 +185,21 @@ function App() {
       }
     };
   }, []);
+
+  const stopScaleAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
+    setPlayingScaleId(null);
+  };
+
+  useEffect(() => {
+    if (activeTab !== 'scales') {
+      stopScaleAudio();
+    }
+  }, [activeTab]);
 
   // Save: update songs.json on GitHub directly
   const handleSaveSong = async (data) => {
@@ -214,10 +328,26 @@ function App() {
     return scale.searchTerms.some((term) => normalizeSearchText(term).includes(normalizedScaleQuery));
   });
 
-  const handleScaleAudioToggle = (scale) => {
+  const transposeRows = TRANSPOSE_ROWS.map((row) => {
+    const selectedRoot = transposeScale?.transposeRoot || 'C';
+    const rootIndex = CHROMATIC_NOTES.indexOf(selectedRoot);
+    const transposedRoot = CHROMATIC_NOTES[(rootIndex + row.shift + CHROMATIC_NOTES.length * 10) % CHROMATIC_NOTES.length];
+    return {
+      ...row,
+      chords: getScaleChords(transposedRoot)
+    };
+  });
+
+  const dockActiveTab = showAddForm || pinTarget === 'add'
+    ? 'add'
+    : pinTarget === 'database'
+      ? 'database'
+      : activeTab;
+
+  const handleScaleAudioToggle = (scale, { forcePlay = false } = {}) => {
     if (!scale.audioUrl) return;
 
-    if (playingScaleId === scale.id && audioRef.current) {
+    if (!forcePlay && playingScaleId === scale.id && audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       audioRef.current = null;
@@ -231,15 +361,9 @@ function App() {
     }
 
     const audio = new Audio(scale.audioUrl);
+    audio.loop = true;
     audioRef.current = audio;
     setPlayingScaleId(scale.id);
-
-    audio.addEventListener('ended', () => {
-      if (audioRef.current === audio) {
-        audioRef.current = null;
-        setPlayingScaleId(null);
-      }
-    }, { once: true });
 
     audio.play().catch(() => {
       if (audioRef.current === audio) {
@@ -247,6 +371,29 @@ function App() {
       }
       setPlayingScaleId(null);
     });
+  };
+
+  useEffect(() => {
+    if (activeTab !== 'scales' || !pendingScaleId) return;
+
+    const scale = SCALES.find((item) => item.id === pendingScaleId);
+    const element = document.getElementById(`scale-card-${pendingScaleId}`);
+
+    if (!scale || !element) return;
+
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    handleScaleAudioToggle(scale, { forcePlay: true });
+    setPendingScaleId(null);
+  }, [activeTab, pendingScaleId]);
+
+  const handleSongScaleClick = (scaleText) => {
+    const scaleId = normalizeScaleId(scaleText);
+    if (!scaleId) return;
+
+    setSelectedSong(null);
+    setScaleSearchQuery('');
+    setActiveTab('scales');
+    setPendingScaleId(scaleId);
   };
 
   // If no token, show sync setup
@@ -300,10 +447,6 @@ function App() {
             </div>
           </div>
 
-          <div className="scales-header-copy">
-            <p>Pick a base scale quickly now, then we can plug audio into each tile next.</p>
-          </div>
-
           <div className="song-grid">
             {filteredScales.map((scale) => (
               <ScaleCard
@@ -311,6 +454,7 @@ function App() {
                 scale={scale}
                 isPlaying={playingScaleId === scale.id}
                 onAudioToggle={() => handleScaleAudioToggle(scale)}
+                onTransposeOpen={() => setTransposeScale(scale)}
               />
             ))}
           </div>
@@ -350,16 +494,38 @@ function App() {
 
       <nav className="floating-dock-container">
         <div className="floating-dock">
-          <button className={`dock-item ${activeTab === 'library' ? 'active' : ''}`} onClick={() => { setActiveTab('library'); setShowAddForm(false); }}>
+          <button className={`dock-item ${dockActiveTab === 'library' ? 'active' : ''}`} onClick={() => { setPinTarget(null); setActiveTab('library'); setShowAddForm(false); }}>
             <Library size={20} />
           </button>
-          <button className={`dock-item ${activeTab === 'scales' ? 'active' : ''}`} onClick={() => { setActiveTab('scales'); setShowAddForm(false); }}>
+          <button className={`dock-item ${dockActiveTab === 'scales' ? 'active' : ''}`} onClick={() => { setPinTarget(null); setActiveTab('scales'); setShowAddForm(false); }}>
             <Music2 size={20} />
           </button>
-          <button className="dock-item" onClick={() => { setPinTarget('add'); }}>
+          <button
+            className={`dock-item ${dockActiveTab === 'add' ? 'active' : ''}`}
+            onClick={() => {
+              if (isUnlocked) {
+                setEditingSong(null);
+                setShowAddForm(true);
+                setPinTarget(null);
+                return;
+              }
+              setPinTarget('add');
+            }}
+          >
             <Plus size={20} />
           </button>
-          <button className={`dock-item ${activeTab === 'database' ? 'active' : ''}`} onClick={() => { setPinTarget('database'); }}>
+          <button
+            className={`dock-item ${dockActiveTab === 'database' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTab('database');
+              setShowAddForm(false);
+              if (isUnlocked) {
+                setPinTarget(null);
+                return;
+              }
+              setPinTarget('database');
+            }}
+          >
             <DbIcon size={20} />
           </button>
         </div>
@@ -374,11 +540,38 @@ function App() {
       )}
 
       {selectedSong && (
-        <SongModal song={selectedSong} onClose={() => setSelectedSong(null)} />
+        <SongModal song={selectedSong} onClose={() => setSelectedSong(null)} onScaleClick={handleSongScaleClick} />
+      )}
+
+      {transposeScale && (
+        <div className="modal-overlay" onClick={() => setTransposeScale(null)}>
+          <div className="modal-content transpose-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <span className="song-card-scale">Transpose</span>
+                <h2 style={{ marginTop: '4px', fontSize: '24px' }}>
+                  {transposeScale.shortLabel} / {SCALE_NOTE_NAMES[transposeScale.transposeRoot]}
+                </h2>
+              </div>
+              <button className="modal-close-btn" onClick={() => setTransposeScale(null)}>Close</button>
+            </div>
+            <div className="modal-body">
+              <div className="transpose-table">
+                {transposeRows.map((row) => (
+                  <div key={row.label} className="transpose-row">
+                    <div className="transpose-label">{row.label}</div>
+                    <div className="transpose-chords">{row.chords.join(' ')}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {pinTarget && (
         <PinLock onCorrect={() => {
+          setIsUnlocked(true);
           if (pinTarget === 'add') {
             setEditingSong(null);
             setShowAddForm(true);
