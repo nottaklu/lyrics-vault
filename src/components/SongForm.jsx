@@ -4,6 +4,13 @@ import { X, Save, Bold, Palette } from 'lucide-react';
 const normalizeLyricsHtml = (value) => String(value || '')
   .replace(/color:\s*(?!#007aff|#007AFF|rgb\(0,\s*122,\s*255\)|rgba\(0,\s*122,\s*255,\s*1\))[^;"']+;?/gi, '');
 
+const escapeHtml = (value) => String(value || '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
 const SongForm = ({ onSave, onCancel, initialData }) => {
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
@@ -27,6 +34,17 @@ const SongForm = ({ onSave, onCancel, initialData }) => {
     : (formData.keywords || '');
 
   const [keywordsDisplay, setKeywordsDisplay] = useState(keywordsInitial);
+
+  const handlePasteLyrics = (e) => {
+    e.preventDefault();
+    const pastedText = e.clipboardData?.getData('text/plain') || '';
+    const normalizedText = pastedText.replace(/\r\n/g, '\n');
+    const html = escapeHtml(normalizedText).replace(/\n/g, '<br>');
+
+    lyricsRef.current?.focus();
+    document.execCommand('insertHTML', false, html);
+    setLyricsHtml(normalizeLyricsHtml(lyricsRef.current?.innerHTML || ''));
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -114,6 +132,7 @@ const SongForm = ({ onSave, onCancel, initialData }) => {
                 contentEditable
                 suppressContentEditableWarning
                 data-placeholder="Paste lyrics here..."
+                onPaste={handlePasteLyrics}
                 onInput={() => setLyricsHtml(normalizeLyricsHtml(lyricsRef.current.innerHTML))}
               />
             </div>

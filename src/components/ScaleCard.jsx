@@ -30,12 +30,12 @@ const ScaleCard = ({ scale, isPlaying, onAudioToggle, onTransposeOpen }) => {
             onClick={onAudioToggle}
           >
             <AudioLines size={12} />
-            <span>{isPlaying ? 'Stop audio' : 'Play audio'}</span>
+            <span>{isPlaying ? 'Stop' : 'Play'}</span>
           </button>
         ) : (
           <span className="mini-pill scale-audio-pill">
             <AudioLines size={12} />
-            <span>Audio soon</span>
+            <span>Soon</span>
           </span>
         )}
       </div>
