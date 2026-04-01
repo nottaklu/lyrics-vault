@@ -132,7 +132,7 @@
                 <div class="search-bar-container">
                     <div class="search-pill">
                         <i data-lucide="search" size="18" style="color:var(--text-dim)"></i>
-                        <input type="text" id="topSearchInput" placeholder="Search songs or tags..." oninput="handleInstantSearch(this.value)">
+                        <input type="text" id="topSearchInput" placeholder="Search title, scale, keywords, or lyrics..." oninput="handleInstantSearch(this.value)">
                     </div>
                 </div>
                 <div id="libraryView" class="song-grid"></div>
@@ -194,6 +194,14 @@
         // Ensure all songs have an order
         songs.forEach((s, i) => { if (s.order === undefined) s.order = i; });
 
+        function normalizeSearchText(value) {
+            return String(value || '').toLowerCase().trim();
+        }
+
+        function stripHtml(value) {
+            return String(value || '').replace(/<[^>]*>/g, ' ');
+        }
+
         function render(filter = '') {
             const lib = document.getElementById('libraryView');
             const dbV = document.getElementById('databaseView');
@@ -202,10 +210,20 @@
             // Sort by order
             songs.sort((a, b) => (a.order || 0) - (b.order || 0));
 
-            const filtered = songs.filter(s => 
-                s.title.toLowerCase().includes(filter.toLowerCase()) || 
-                (s.keywords && s.keywords.some(k => k.toLowerCase().includes(filter.toLowerCase())))
-            );
+            const normalizedFilter = normalizeSearchText(filter);
+
+            const filtered = songs.filter((s) => {
+                if (!normalizedFilter) return true;
+
+                const searchFields = [
+                    s.title,
+                    s.scale,
+                    stripHtml(s.lyrics),
+                    ...(Array.isArray(s.keywords) ? s.keywords : [])
+                ];
+
+                return searchFields.some((field) => normalizeSearchText(field).includes(normalizedFilter));
+            });
 
             filtered.forEach(s => {
                 const card = document.createElement('div');

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Library, Plus, Search as SearchIcon, Database as DbIcon, Edit2, Trash2, GripVertical, Sun, Moon } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Library, Plus, Search as SearchIcon, Database as DbIcon, Edit2, Trash2, GripVertical, Sun, Moon, Music2 } from 'lucide-react';
 import SongCard from './components/SongCard';
+import ScaleCard from './components/ScaleCard';
 import SongModal from './components/SongModal';
 import SongForm from './components/SongForm';
 import { githubService } from './services/githubService';
@@ -8,9 +9,35 @@ import SyncSetup from './components/SyncSetup';
 import PinLock from './components/PinLock';
 import './App.css';
 
+const normalizeSearchText = (value) => String(value || '').toLowerCase().trim();
+
+const stripHtml = (value) => String(value || '').replace(/<[^>]*>/g, ' ');
+
+const SCALE_ROOTS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+
+const SCALES = SCALE_ROOTS.flatMap((root) => ([
+  {
+    id: `${root}-major`,
+    root,
+    type: 'Major',
+    label: `${root} Major`,
+    searchTerms: [root, 'major', `${root} major scale`, `${root} ionian`],
+    audioUrl: root === 'A' ? '/lyrics-vault/audio/scales/A-major.mp3' : null
+  },
+  {
+    id: `${root}-minor`,
+    root,
+    type: 'Minor',
+    label: `${root} Minor`,
+    searchTerms: [root, 'minor', `${root} minor scale`, `${root} aeolian`],
+    audioUrl: null
+  }
+]));
+
 function App() {
   const [songs, setSongs] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [scaleSearchQuery, setScaleSearchQuery] = useState('');
   const [selectedSong, setSelectedSong] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingSong, setEditingSong] = useState(null);
@@ -19,6 +46,8 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [pinTarget, setPinTarget] = useState(null); // 'database' or 'add'
+  const [playingScaleId, setPlayingScaleId] = useState(null);
+  const audioRef = useRef(null);
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
@@ -48,6 +77,15 @@ function App() {
   useEffect(() => {
     loadSongs();
   }, [ghToken]);
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
 
   // Save: update songs.json on GitHub directly
   const handleSaveSong = async (data) => {
@@ -152,11 +190,64 @@ function App() {
     }
   };
 
-  const filtered = songs.filter(s =>
-    s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (s.scale && s.scale.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (s.keywords && s.keywords.some(k => k.toLowerCase().includes(searchQuery.toLowerCase())))
-  ).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const normalizedQuery = normalizeSearchText(searchQuery);
+
+  const filtered = songs.filter((song) => {
+    if (!normalizedQuery) return true;
+
+    const searchFields = [
+      song.title,
+      song.scale,
+      song.chords,
+      stripHtml(song.lyrics),
+      ...(Array.isArray(song.keywords) ? song.keywords : [])
+    ];
+
+    return searchFields.some((field) => normalizeSearchText(field).includes(normalizedQuery));
+  }).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+  const normalizedScaleQuery = normalizeSearchText(scaleSearchQuery);
+
+  const filteredScales = SCALES.filter((scale) => {
+    if (!normalizedScaleQuery) return true;
+
+    return scale.searchTerms.some((term) => normalizeSearchText(term).includes(normalizedScaleQuery));
+  });
+
+  const handleScaleAudioToggle = (scale) => {
+    if (!scale.audioUrl) return;
+
+    if (playingScaleId === scale.id && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+      setPlayingScaleId(null);
+      return;
+    }
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+
+    const audio = new Audio(scale.audioUrl);
+    audioRef.current = audio;
+    setPlayingScaleId(scale.id);
+
+    audio.addEventListener('ended', () => {
+      if (audioRef.current === audio) {
+        audioRef.current = null;
+        setPlayingScaleId(null);
+      }
+    }, { once: true });
+
+    audio.play().catch(() => {
+      if (audioRef.current === audio) {
+        audioRef.current = null;
+      }
+      setPlayingScaleId(null);
+    });
+  };
 
   // If no token, show sync setup
   if (!ghToken) {
@@ -168,7 +259,7 @@ function App() {
   return (
     <div className="app-container" data-theme={theme}>
       <header className="app-header">
-        <h1>{activeTab === 'database' ? 'Database' : 'Lyrics'}</h1>
+        <h1>{activeTab === 'database' ? 'Database' : activeTab === 'scales' ? 'Scales' : 'Lyrics'}</h1>
         <button className="theme-toggle" onClick={toggleTheme}>
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
         </button>
@@ -183,7 +274,7 @@ function App() {
               <SearchIcon size={18} className="search-icon" />
               <input
                 type="text"
-                placeholder="Search songs or tags..."
+                placeholder="Search title, scale, chords, keywords, or lyrics..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -192,6 +283,35 @@ function App() {
           <div className="song-grid">
             {filtered.map(s => (
               <SongCard key={s.id} song={s} onClick={() => setSelectedSong(s)} />
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: (activeTab === 'scales') ? 'block' : 'none' }}>
+          <div className="search-bar-container">
+            <div className="search-pill">
+              <SearchIcon size={18} className="search-icon" />
+              <input
+                type="text"
+                placeholder="Search major and minor scales..."
+                value={scaleSearchQuery}
+                onChange={(e) => setScaleSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="scales-header-copy">
+            <p>Pick a base scale quickly now, then we can plug audio into each tile next.</p>
+          </div>
+
+          <div className="song-grid">
+            {filteredScales.map((scale) => (
+              <ScaleCard
+                key={scale.id}
+                scale={scale}
+                isPlaying={playingScaleId === scale.id}
+                onAudioToggle={() => handleScaleAudioToggle(scale)}
+              />
             ))}
           </div>
         </div>
@@ -232,6 +352,9 @@ function App() {
         <div className="floating-dock">
           <button className={`dock-item ${activeTab === 'library' ? 'active' : ''}`} onClick={() => { setActiveTab('library'); setShowAddForm(false); }}>
             <Library size={20} />
+          </button>
+          <button className={`dock-item ${activeTab === 'scales' ? 'active' : ''}`} onClick={() => { setActiveTab('scales'); setShowAddForm(false); }}>
+            <Music2 size={20} />
           </button>
           <button className="dock-item" onClick={() => { setPinTarget('add'); }}>
             <Plus size={20} />
