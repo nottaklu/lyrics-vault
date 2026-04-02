@@ -249,6 +249,7 @@ function App() {
   const [notesContent, setNotesContent] = useState(normalizeNotesHtml(localStorage.getItem('notes_content') || ''));
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
+  const [tabTransitionKey, setTabTransitionKey] = useState(0);
   const audioRef = useRef(null);
   const notesEditorRef = useRef(null);
   const notesViewRef = useRef(null);
@@ -354,6 +355,10 @@ function App() {
       notesViewRef.current.scrollLeft = 0;
     }
   }, [activeTab, isEditingNotes, notesContent]);
+
+  useEffect(() => {
+    setTabTransitionKey((current) => current + 1);
+  }, [activeTab]);
 
   useEffect(() => {
     if (notesEditorRef.current && notesEditorRef.current.innerHTML !== normalizeNotesHtml(notesContent) && isEditingNotes) {
@@ -683,7 +688,11 @@ function App() {
           )} 
         </header>
 
-        <div style={{ display: (activeTab === 'library') ? 'block' : 'none' }}>
+        <div
+          key={`library-${tabTransitionKey}`}
+          className={`tab-panel ${activeTab === 'library' ? 'is-active' : 'is-hidden'}`}
+          style={{ display: (activeTab === 'library') ? 'block' : 'none' }}
+        >
           <div className="search-bar-container">
             <div className="search-pill hero-pill">
               <SearchIcon size={18} className="search-icon" />
@@ -696,13 +705,17 @@ function App() {
             </div>
           </div>
           <div className="song-grid">
-            {filtered.map(s => (
-              <SongCard key={s.id} song={s} onClick={() => setSelectedSong(s)} />
+            {filtered.map((s, index) => (
+              <SongCard key={s.id} song={s} index={index} onClick={() => setSelectedSong(s)} />
             ))}
           </div>
         </div>
 
-        <div style={{ display: (activeTab === 'scales') ? 'block' : 'none' }}>
+        <div
+          key={`scales-${tabTransitionKey}`}
+          className={`tab-panel ${activeTab === 'scales' ? 'is-active' : 'is-hidden'}`}
+          style={{ display: (activeTab === 'scales') ? 'block' : 'none' }}
+        >
           <div className="search-bar-container">
             <div className="search-pill hero-pill">
               <SearchIcon size={18} className="search-icon" />
@@ -716,10 +729,11 @@ function App() {
           </div>
 
           <div className="song-grid">
-            {filteredScales.map((scale) => (
+            {filteredScales.map((scale, index) => (
               <ScaleCard
                 key={scale.id}
                 scale={scale}
+                index={index}
                 isPlaying={playingScaleId === scale.id}
                 onAudioToggle={() => handleScaleAudioToggle(scale)}
                 onTransposeOpen={() => setTransposeScale(scale)}
@@ -728,7 +742,11 @@ function App() {
           </div>
         </div>
 
-        <div className="db-view" style={{ display: (activeTab === 'database') ? 'flex' : 'none' }}>
+        <div
+          key={`database-${tabTransitionKey}`}
+          className={`db-view tab-panel ${activeTab === 'database' ? 'is-active' : 'is-hidden'}`}
+          style={{ display: (activeTab === 'database') ? 'flex' : 'none' }}
+        >
           <div className="db-toolbar">
             <button
               className="db-add-song-btn"
@@ -777,7 +795,11 @@ function App() {
           </div>
         </div>
 
-        <div className="notes-screen" style={{ display: (activeTab === 'notes') ? 'flex' : 'none' }}>
+        <div
+          key={`notes-${tabTransitionKey}`}
+          className={`notes-screen tab-panel ${activeTab === 'notes' ? 'is-active' : 'is-hidden'}`}
+          style={{ display: (activeTab === 'notes') ? 'flex' : 'none' }}
+        >
           <div className={`notes-sheet ${isEditingNotes ? 'is-editing' : ''}`}>
             {isEditingNotes && (
               <div className="notes-toolbar">

@@ -1,9 +1,13 @@
 import React from 'react';
 import { AudioLines } from 'lucide-react';
 
-const ScaleCard = ({ scale, isPlaying, onAudioToggle, onTransposeOpen }) => {
+const ScaleCard = ({ scale, isPlaying, onAudioToggle, onTransposeOpen, index = 0 }) => {
   return (
-    <div id={`scale-card-${scale.id}`} className="song-card scale-card">
+    <div
+      id={`scale-card-${scale.id}`}
+      className="song-card scale-card tile-animate"
+      style={{ animationDelay: `${Math.min(index * 40, 240)}ms` }}
+    >
       <div className="scale-card-top">
         <span className="song-card-scale">{scale.type}</span>
         <span className="scale-root-pill">{scale.root}</span>
