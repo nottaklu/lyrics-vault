@@ -73,5 +73,27 @@ export const githubService = {
   async getSongs() {
     const file = await this.fetchFile('data/songs.json');
     return file ? file.content : [];
+  },
+
+  async getNotes() {
+    const file = await this.fetchFile('data/notes.json');
+    return file ? file.content : null;
+  },
+
+  async saveNotes(content) {
+    const currentFile = await this.fetchFile('data/notes.json');
+    const payload = {
+      content,
+      updatedAt: new Date().toISOString()
+    };
+
+    await this.uploadFile(
+      'data/notes.json',
+      JSON.stringify(payload, null, 2),
+      'Update notes',
+      currentFile?.sha
+    );
+
+    return payload;
   }
 };

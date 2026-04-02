@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Library, Search as SearchIcon, Database as DbIcon, Edit2, Trash2, GripVertical, Sun, Moon, Music2, Check } from 'lucide-react';
+import { Library, Search as SearchIcon, Database as DbIcon, Edit2, Trash2, GripVertical, Sun, Moon, Music2, Check, Bold, Palette, Heading2, ListTodo, Link2, X } from 'lucide-react';
 import SongCard from './components/SongCard';
 import ScaleCard from './components/ScaleCard';
 import SongModal from './components/SongModal';
@@ -12,6 +12,80 @@ import './App.css';
 const normalizeSearchText = (value) => String(value || '').toLowerCase().trim();
 
 const stripHtml = (value) => String(value || '').replace(/<[^>]*>/g, ' ');
+const escapeHtml = (value) => String(value || '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
+const normalizeNotesHtml = (value) => {
+  const raw = String(value || '');
+  if (!raw.trim()) return '';
+  if (/<[a-z][\s\S]*>/i.test(raw)) return raw;
+  return escapeHtml(raw).replace(/\r\n/g, '\n').replace(/\n/g, '<br>');
+};
+
+const BLOCK_NOTE_TAGS = new Set(['DIV', 'P', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6']);
+
+const serializeNotesNode = (node) => {
+  if (!node) return '';
+
+  if (node.nodeType === Node.TEXT_NODE) {
+    return escapeHtml(node.textContent || '');
+  }
+
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return '';
+  }
+
+  const element = node;
+  const tagName = element.tagName.toUpperCase();
+
+  if (tagName === 'BR') {
+    return '<br>';
+  }
+
+  if (tagName === 'SPAN' && element.classList.contains('notes-song-link')) {
+    const title = escapeHtml(element.getAttribute('data-song-title') || element.textContent || '');
+    const label = Array.from(element.childNodes).map(serializeNotesNode).join('') || escapeHtml(element.textContent || '');
+    return `<span class="notes-song-link" data-song-title="${title}" contenteditable="false">${label}</span>`;
+  }
+
+  const childrenHtml = Array.from(element.childNodes).map(serializeNotesNode).join('');
+
+  if (tagName === 'STRONG' || tagName === 'B') return `<strong>${childrenHtml}</strong>`;
+  if (tagName === 'EM' || tagName === 'I') return `<em>${childrenHtml}</em>`;
+  if (tagName === 'U') return `<u>${childrenHtml}</u>`;
+  if (tagName === 'H2') return `<h2>${childrenHtml}</h2>`;
+
+  if (tagName === 'SPAN') {
+    const color = (element.style?.color || '').replace(/\s+/g, '').toLowerCase();
+    if (color === 'rgb(0,122,255)' || color === '#007aff') {
+      return `<span style="color:#007AFF">${childrenHtml}</span>`;
+    }
+    return childrenHtml;
+  }
+
+  if (BLOCK_NOTE_TAGS.has(tagName)) {
+    if (!childrenHtml.trim()) return '<br>';
+    return `${childrenHtml}<br>`;
+  }
+
+  return childrenHtml;
+};
+
+const extractNotesHtml = (element) => {
+  if (!element) return '';
+
+  const html = Array.from(element.childNodes)
+    .map(serializeNotesNode)
+    .join('')
+    .replace(/(<br>\s*){3,}/gi, '<br><br>')
+    .replace(/(<br>\s*)+$/gi, '');
+
+  return normalizeNotesHtml(html);
+};
 
 const SCALE_ALIASES = {
   'a sharp': 'A#',
@@ -70,6 +144,17 @@ const SCALE_AUDIO_MAP = {
   'F-minor': '/lyrics-vault/audio/scales/F-minor.mp3'
 };
 
+function getNoteSearchTerms(noteLabel) {
+  const normalized = String(noteLabel || '').trim();
+  if (!normalized) return [];
+
+  const withKaali = normalized.replace(/\bkali\b/gi, 'Kaali');
+  const compact = normalized.replace(/\s+/g, '');
+  const compactKaali = withKaali.replace(/\s+/g, '');
+
+  return Array.from(new Set([normalized, withKaali, compact, compactKaali]));
+}
+
 function getScaleChords(root) {
   const rootIndex = CHROMATIC_NOTES.indexOf(root);
   if (rootIndex === -1) return [];
@@ -91,7 +176,16 @@ const SCALES = SCALE_ROOTS.flatMap((root) => ([
     shortLabel: `${root} Major`,
     noteLabel: SCALE_NOTE_NAMES[root],
     transposeRoot: root,
-    searchTerms: [root, 'major', `${root} major scale`, `${root} ionian`, ...getScaleChords(root), getScaleChords(root).join(' ')],
+    searchTerms: [
+      root,
+      'major',
+      `${root} major scale`,
+      `${root} ionian`,
+      SCALE_NOTE_NAMES[root],
+      ...getNoteSearchTerms(SCALE_NOTE_NAMES[root]),
+      ...getScaleChords(root),
+      getScaleChords(root).join(' ')
+    ],
     audioUrl: SCALE_AUDIO_MAP[`${root}-major`] || null
   },
   {
@@ -102,7 +196,16 @@ const SCALES = SCALE_ROOTS.flatMap((root) => ([
     shortLabel: `${root} Minor`,
     noteLabel: SCALE_NOTE_NAMES[CHROMATIC_NOTES[(CHROMATIC_NOTES.indexOf(root) + 3) % CHROMATIC_NOTES.length]],
     transposeRoot: CHROMATIC_NOTES[(CHROMATIC_NOTES.indexOf(root) + 3) % CHROMATIC_NOTES.length],
-    searchTerms: [root, 'minor', `${root} minor scale`, `${root} aeolian`, ...getScaleChords(CHROMATIC_NOTES[(CHROMATIC_NOTES.indexOf(root) + 3) % CHROMATIC_NOTES.length]), getScaleChords(CHROMATIC_NOTES[(CHROMATIC_NOTES.indexOf(root) + 3) % CHROMATIC_NOTES.length]).join(' ')],
+    searchTerms: [
+      root,
+      'minor',
+      `${root} minor scale`,
+      `${root} aeolian`,
+      SCALE_NOTE_NAMES[CHROMATIC_NOTES[(CHROMATIC_NOTES.indexOf(root) + 3) % CHROMATIC_NOTES.length]],
+      ...getNoteSearchTerms(SCALE_NOTE_NAMES[CHROMATIC_NOTES[(CHROMATIC_NOTES.indexOf(root) + 3) % CHROMATIC_NOTES.length]]),
+      ...getScaleChords(CHROMATIC_NOTES[(CHROMATIC_NOTES.indexOf(root) + 3) % CHROMATIC_NOTES.length]),
+      getScaleChords(CHROMATIC_NOTES[(CHROMATIC_NOTES.indexOf(root) + 3) % CHROMATIC_NOTES.length]).join(' ')
+    ],
     audioUrl: SCALE_AUDIO_MAP[`${root}-minor`] || null
   }
 ]));
@@ -143,10 +246,13 @@ function App() {
   const [pinTarget, setPinTarget] = useState(null);
   const [playingScaleId, setPlayingScaleId] = useState(null);
   const [pendingScaleId, setPendingScaleId] = useState(null);
-  const [notesContent, setNotesContent] = useState(localStorage.getItem('notes_content') || '');
+  const [notesContent, setNotesContent] = useState(normalizeNotesHtml(localStorage.getItem('notes_content') || ''));
   const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [notesPreviewSong, setNotesPreviewSong] = useState(null);
+  const [savingNotes, setSavingNotes] = useState(false);
   const audioRef = useRef(null);
-  const notesTextareaRef = useRef(null);
+  const notesEditorRef = useRef(null);
+  const notesViewRef = useRef(null);
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
@@ -175,6 +281,24 @@ function App() {
 
   useEffect(() => {
     loadSongs();
+  }, [ghToken]);
+
+  useEffect(() => {
+    const loadNotes = async () => {
+      if (!ghToken) return;
+
+      try {
+        const notesFile = await githubService.getNotes();
+        if (notesFile?.content) {
+          setNotesContent(normalizeNotesHtml(notesFile.content));
+          localStorage.setItem('notes_content', normalizeNotesHtml(notesFile.content));
+        }
+      } catch (err) {
+        console.error('Failed to load notes:', err);
+      }
+    };
+
+    loadNotes();
   }, [ghToken]);
 
   useEffect(() => {
@@ -211,7 +335,8 @@ function App() {
   useEffect(() => {
     if (activeTab !== 'notes') {
       setIsEditingNotes(false);
-      notesTextareaRef.current?.blur();
+      setNotesPreviewSong(null);
+      notesEditorRef.current?.blur();
     }
   }, [activeTab]);
 
@@ -221,9 +346,34 @@ function App() {
 
   useEffect(() => {
     if (activeTab === 'notes' && isEditingNotes) {
-      notesTextareaRef.current?.focus();
+      notesEditorRef.current?.focus();
     }
   }, [activeTab, isEditingNotes]);
+
+  useEffect(() => {
+    if (activeTab === 'notes' && !isEditingNotes && notesViewRef.current) {
+      notesViewRef.current.scrollTop = 0;
+      notesViewRef.current.scrollLeft = 0;
+    }
+  }, [activeTab, isEditingNotes, notesContent]);
+
+  useEffect(() => {
+    if (notesEditorRef.current && notesEditorRef.current.innerHTML !== normalizeNotesHtml(notesContent) && isEditingNotes) {
+      notesEditorRef.current.innerHTML = normalizeNotesHtml(notesContent);
+    }
+  }, [notesContent, isEditingNotes]);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+
+    if (notesPreviewSong) {
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [notesPreviewSong]);
 
   // Save: update songs.json on GitHub directly
   const handleSaveSong = async (data) => {
@@ -369,9 +519,98 @@ function App() {
       : activeTab;
 
   const handleNotesDone = () => {
+    const nextNotes = extractNotesHtml(notesEditorRef.current);
+    setNotesContent(nextNotes);
     setIsEditingNotes(false);
-    notesTextareaRef.current?.blur();
+    setNotesPreviewSong(null);
+    notesEditorRef.current?.blur();
+
+    if (!ghToken) return;
+
+    setSavingNotes(true);
+    githubService.saveNotes(nextNotes)
+      .then(() => {
+        localStorage.setItem('notes_content', nextNotes);
+      })
+      .catch((err) => {
+        console.error('Failed to sync notes:', err);
+        alert('Notes saved locally, but sync failed.');
+      })
+      .finally(() => {
+        setSavingNotes(false);
+      });
   };
+
+  const handleNotesInput = () => {
+    setNotesContent(extractNotesHtml(notesEditorRef.current));
+  };
+
+  const handleNotesPaste = (e) => {
+    e.preventDefault();
+    const pastedText = e.clipboardData?.getData('text/plain') || '';
+    const html = escapeHtml(pastedText).replace(/\r\n/g, '\n').replace(/\n/g, '<br>');
+    notesEditorRef.current?.focus();
+    document.execCommand('insertHTML', false, html);
+    handleNotesInput();
+  };
+
+  const applyNotesCommand = (command, value = null) => {
+    notesEditorRef.current?.focus();
+    if (command === 'foreColor') {
+      document.execCommand('styleWithCSS', false, true);
+    }
+    document.execCommand(command, false, value);
+    handleNotesInput();
+  };
+
+  const insertNotesChecklist = () => {
+    notesEditorRef.current?.focus();
+    document.execCommand('insertHTML', false, '<div>☐ Checklist item</div>');
+    handleNotesInput();
+  };
+
+  const insertSongLink = () => {
+    const selection = window.getSelection();
+    const selectedText = selection?.toString().trim() || '';
+    const promptValue = selectedText || '';
+    const songTitle = window.prompt('Enter the song title to link', promptValue);
+    if (!songTitle) return;
+
+    const label = escapeHtml(selectedText || songTitle);
+    const safeTitle = escapeHtml(songTitle);
+    notesEditorRef.current?.focus();
+    document.execCommand(
+      'insertHTML',
+      false,
+      `<span class="notes-song-link" data-song-title="${safeTitle}" contenteditable="false">${label}</span>`
+    );
+    handleNotesInput();
+  };
+
+  const findSongByTitle = (title) => {
+    const normalized = normalizeSearchText(title);
+    return songs.find((song) => normalizeSearchText(song.title) === normalized)
+      || songs.find((song) => normalizeSearchText(song.title).includes(normalized));
+  };
+
+  const handleNotesLinkClick = (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const link = target.closest('.notes-song-link');
+    if (!link) return;
+
+    const song = findSongByTitle(link.dataset.songTitle || link.textContent);
+    if (!song) {
+      alert('Linked song not found in your library yet.');
+      return;
+    }
+
+    setNotesPreviewSong(song);
+  };
+
+  const getNotesPreviewHtml = (html) => normalizeNotesHtml(html)
+    .replace(/<span class="notes-song-link" data-song-title="([^"]+)" contenteditable="false">([\s\S]*?)<\/span>/g, '<button type="button" class="notes-song-link" data-song-title="$1">$2</button>');
 
   const handleScaleAudioToggle = (scale, { forcePlay = false } = {}) => {
     if (!scale.audioUrl) return;
@@ -434,25 +673,32 @@ function App() {
 
   return (
     <div className="app-container" data-theme={theme}>
-      <header className="app-header">
-        <h1>{activeTab === 'database' ? 'Database' : activeTab === 'scales' ? 'Scales' : activeTab === 'notes' ? 'Notes' : 'Lyrics'}</h1>
-        {activeTab === 'notes' && isEditingNotes ? (
-          <button className="theme-toggle" onClick={handleNotesDone} aria-label="Done editing notes">
-            <Check size={18} />
-          </button>
-        ) : (
-          <button className="theme-toggle" onClick={toggleTheme}>
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-        )}
-      </header>
-
       <main className={`content-area ${activeTab === 'notes' ? 'notes-mode' : ''}`}>
-        {loading && <div className="top-loader-bar"></div>}
+        {(loading || savingNotes) && <div className="top-loader-bar"></div>}
+        <header className="app-header">
+          <div className="header-copy">
+            <h1>{activeTab === 'database' ? 'Database' : activeTab === 'scales' ? 'Scales' : activeTab === 'notes' ? 'Notes' : 'Lyrics'}</h1>
+          </div>
+          {activeTab === 'notes' ? (
+            isEditingNotes ? (
+              <button className="theme-toggle" onClick={handleNotesDone} aria-label="Done editing notes">
+                <Check size={18} />
+              </button>
+            ) : (
+              <button className="theme-toggle" onClick={() => setIsEditingNotes(true)} aria-label="Edit notes">
+                <Edit2 size={16} />
+              </button>
+            )
+          ) : (
+            <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+          )} 
+        </header>
 
         <div style={{ display: (activeTab === 'library') ? 'block' : 'none' }}>
           <div className="search-bar-container">
-            <div className="search-pill">
+            <div className="search-pill hero-pill">
               <SearchIcon size={18} className="search-icon" />
               <input
                 type="text"
@@ -471,11 +717,11 @@ function App() {
 
         <div style={{ display: (activeTab === 'scales') ? 'block' : 'none' }}>
           <div className="search-bar-container">
-            <div className="search-pill">
+            <div className="search-pill hero-pill">
               <SearchIcon size={18} className="search-icon" />
               <input
                 type="text"
-                placeholder="Search major and minor scales..."
+                placeholder="Search scales, Safed/Kaali notes, or chord family..."
                 value={scaleSearchQuery}
                 onChange={(e) => setScaleSearchQuery(e.target.value)}
               />
@@ -546,23 +792,67 @@ function App() {
 
         <div className="notes-screen" style={{ display: (activeTab === 'notes') ? 'flex' : 'none' }}>
           <div className={`notes-sheet ${isEditingNotes ? 'is-editing' : ''}`}>
-            <textarea
-              ref={notesTextareaRef}
-              className="notes-editor"
-              value={notesContent}
-              onChange={(e) => setNotesContent(e.target.value)}
-              onFocus={() => setIsEditingNotes(true)}
-              placeholder="Start writing your notes..."
-              readOnly={!isEditingNotes}
-              onClick={() => {
-                if (!isEditingNotes) {
-                  setIsEditingNotes(true);
-                }
-              }}
-            />
+            {isEditingNotes && (
+              <div className="notes-toolbar">
+                <button type="button" onMouseDown={(e) => { e.preventDefault(); applyNotesCommand('bold'); }}>
+                  <Bold size={16} />
+                </button>
+                <button type="button" onMouseDown={(e) => { e.preventDefault(); applyNotesCommand('foreColor', '#007AFF'); }}>
+                  <Palette size={16} />
+                </button>
+                <button type="button" onMouseDown={(e) => { e.preventDefault(); applyNotesCommand('formatBlock', 'h2'); }}>
+                  <Heading2 size={16} />
+                </button>
+                <button type="button" onMouseDown={(e) => { e.preventDefault(); insertNotesChecklist(); }}>
+                  <ListTodo size={16} />
+                </button>
+                <button type="button" onMouseDown={(e) => { e.preventDefault(); insertSongLink(); }}>
+                  <Link2 size={16} />
+                </button>
+              </div>
+            )}
+
+            {isEditingNotes ? (
+              <div
+                ref={notesEditorRef}
+                className="notes-editor rich-notes-editor"
+                contentEditable
+                suppressContentEditableWarning
+                data-placeholder="Write your flow, headings, checklists, and linked songs here..."
+                onInput={handleNotesInput}
+                onPaste={handleNotesPaste}
+              />
+            ) : (
+              <div key={`notes-preview-${notesContent.length}`} className="notes-view" onClick={handleNotesLinkClick}>
+                <div
+                  ref={notesViewRef}
+                  className="notes-renderer"
+                  dangerouslySetInnerHTML={{ __html: getNotesPreviewHtml(notesContent || '<p class="notes-empty">Tap anywhere to start writing your flow.</p>') }}
+                />
+              </div>
+            )}
           </div>
         </div>
       </main>
+
+      {notesPreviewSong && (
+        <div className="notes-song-overlay" onClick={() => setNotesPreviewSong(null)}>
+          <div className="notes-song-preview" onClick={(e) => e.stopPropagation()}>
+            <div className="notes-song-preview-header">
+              <div>
+                <span className="song-card-scale">{notesPreviewSong.scale || 'Linked Song'}</span>
+                <h3>{notesPreviewSong.title}</h3>
+              </div>
+              <button type="button" className="modal-close-btn" onClick={() => setNotesPreviewSong(null)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="notes-song-preview-body">
+              <pre className="lyrics-text" dangerouslySetInnerHTML={{ __html: notesPreviewSong.lyrics }} />
+            </div>
+          </div>
+        </div>
+      )}
 
       <nav className="floating-dock-container">
         <div className="floating-dock">
@@ -603,6 +893,7 @@ function App() {
         <SongForm
           onSave={handleSaveSong}
           initialData={editingSong}
+          existingKeywords={songs.flatMap((song) => Array.isArray(song.keywords) ? song.keywords : [])}
           onCancel={() => { setShowAddForm(false); setEditingSong(null); }}
         />
       )}

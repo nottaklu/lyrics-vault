@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Save, Bold, Palette } from 'lucide-react';
+import { X, Save, Bold, Palette, Plus } from 'lucide-react';
 
 const normalizeLyricsHtml = (value) => String(value || '')
   .replace(/color:\s*(?!#007aff|#007AFF|rgb\(0,\s*122,\s*255\)|rgba\(0,\s*122,\s*255,\s*1\))[^;"']+;?/gi, '');
@@ -11,7 +11,20 @@ const escapeHtml = (value) => String(value || '')
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#39;');
 
-const SongForm = ({ onSave, onCancel, initialData }) => {
+const DEFAULT_TAGS = [
+  'Fast',
+  'Slow',
+  'Peaceful',
+  'Energetic',
+  'Opening',
+  'Closing',
+  'Bhajan',
+  'Aarti',
+  'Nemi',
+  'Girnar'
+];
+
+const SongForm = ({ onSave, onCancel, initialData, existingKeywords = [] }) => {
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
     scale: initialData?.scale || '',
@@ -29,11 +42,37 @@ const SongForm = ({ onSave, onCancel, initialData }) => {
     }
   }, []);
 
-  const keywordsInitial = Array.isArray(initialData?.keywords) 
-    ? initialData.keywords.join(', ') 
-    : (formData.keywords || '');
+  const [selectedKeywords, setSelectedKeywords] = useState(
+    Array.isArray(initialData?.keywords)
+      ? initialData.keywords
+      : String(formData.keywords || '')
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean)
+  );
+  const [keywordInput, setKeywordInput] = useState('');
 
-  const [keywordsDisplay, setKeywordsDisplay] = useState(keywordsInitial);
+  const tagSuggestions = Array.from(new Set([
+    ...DEFAULT_TAGS,
+    ...existingKeywords.filter(Boolean),
+    ...selectedKeywords.filter(Boolean)
+  ])).sort((a, b) => a.localeCompare(b));
+
+  const addKeyword = (rawValue) => {
+    const nextKeyword = String(rawValue || '').trim();
+    if (!nextKeyword) return;
+
+    setSelectedKeywords((current) => (
+      current.some((item) => item.toLowerCase() === nextKeyword.toLowerCase())
+        ? current
+        : [...current, nextKeyword]
+    ));
+    setKeywordInput('');
+  };
+
+  const removeKeyword = (keyword) => {
+    setSelectedKeywords((current) => current.filter((item) => item !== keyword));
+  };
 
   const handlePasteLyrics = (e) => {
     e.preventDefault();
@@ -49,16 +88,12 @@ const SongForm = ({ onSave, onCancel, initialData }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.title) return;
-    
-    const keywordsArray = keywordsDisplay
-      ? keywordsDisplay.split(',').map(k => k.trim()).filter(k => k !== '')
-      : [];
 
     const currentLyrics = lyricsRef.current ? normalizeLyricsHtml(lyricsRef.current.innerHTML) : formData.lyrics;
     onSave({
       ...formData,
       lyrics: currentLyrics,
-      keywords: keywordsArray
+      keywords: selectedKeywords
     });
   };
 
@@ -103,12 +138,58 @@ const SongForm = ({ onSave, onCancel, initialData }) => {
             </div>
             <div className="form-group">
               <label>Keywords</label>
-              <input 
-                type="text" 
-                value={keywordsDisplay}
-                onChange={e => setKeywordsDisplay(e.target.value)}
-                placeholder="fast, hits, energetic"
-              />
+              <div className="tag-picker">
+                <div className="tag-input-row">
+                  <input
+                    type="text"
+                    value={keywordInput}
+                    onChange={e => setKeywordInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ',') {
+                        e.preventDefault();
+                        addKeyword(keywordInput);
+                      }
+                    }}
+                    placeholder="Add a tag"
+                  />
+                  <button type="button" className="tag-add-btn" onClick={() => addKeyword(keywordInput)}>
+                    <Plus size={16} />
+                  </button>
+                </div>
+
+                {selectedKeywords.length > 0 && (
+                  <div className="selected-tags">
+                    {selectedKeywords.map((keyword) => (
+                      <button
+                        type="button"
+                        key={keyword}
+                        className="selected-tag"
+                        onClick={() => removeKeyword(keyword)}
+                      >
+                        <span>{keyword}</span>
+                        <X size={12} />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="tag-suggestions">
+                  {tagSuggestions.map((keyword) => (
+                    <button
+                      type="button"
+                      key={keyword}
+                      className={`tag-suggestion ${selectedKeywords.includes(keyword) ? 'is-selected' : ''}`}
+                      onClick={() => (
+                        selectedKeywords.includes(keyword)
+                          ? removeKeyword(keyword)
+                          : addKeyword(keyword)
+                      )}
+                    >
+                      {keyword}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
             <div className="form-group">
               <label>Lyrics</label>
