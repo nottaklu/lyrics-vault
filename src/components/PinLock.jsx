@@ -1,5 +1,18 @@
 import React, { useState } from 'react';
-import { Delete } from 'lucide-react';
+import { Delete, LockKeyhole, ShieldCheck } from 'lucide-react';
+
+const PIN_SYMBOLS = {
+  '0': '◐',
+  '1': '✦',
+  '2': '◈',
+  '3': '☍',
+  '4': '△',
+  '5': '☾',
+  '6': '✶',
+  '7': '⌘',
+  '8': '◇',
+  '9': '☉'
+};
 
 const PinLock = ({ onCorrect, title = "Siddh's Lyrics", subtitle = "Enter PIN" }) => {
   const [pin, setPin] = useState('');
@@ -30,8 +43,16 @@ const PinLock = ({ onCorrect, title = "Siddh's Lyrics", subtitle = "Enter PIN" }
     <div className="pin-overlay">
       <div className="pin-container">
         <div className="pin-header">
-          <h1 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '8px' }}>{title}</h1>
-          <p style={{ color: 'var(--text-dim)', fontSize: '14px' }}>{subtitle}</p>
+          <div className="pin-badge-row">
+            <div className="pin-badge">
+              <LockKeyhole size={18} />
+            </div>
+            <div className="pin-badge is-accent">
+              <ShieldCheck size={18} />
+            </div>
+          </div>
+          <h1 className="pin-title">{title}</h1>
+          <p className="pin-subtitle">{subtitle}</p>
         </div>
 
         <div className="pin-dots">
@@ -43,11 +64,13 @@ const PinLock = ({ onCorrect, title = "Siddh's Lyrics", subtitle = "Enter PIN" }
         <div className="pin-keypad">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
             <button key={num} className="pin-key" onClick={() => handleKeyClick(num.toString())}>
-              {num}
+              <span className="pin-key-symbol">{PIN_SYMBOLS[num.toString()]}</span>
             </button>
           ))}
           <div className="pin-key empty"></div>
-          <button className="pin-key" onClick={() => handleKeyClick('0')}>0</button>
+          <button className="pin-key" onClick={() => handleKeyClick('0')}>
+            <span className="pin-key-symbol">{PIN_SYMBOLS['0']}</span>
+          </button>
           <button className="pin-key delete" onClick={handleDelete}>
             <Delete size={24} />
           </button>

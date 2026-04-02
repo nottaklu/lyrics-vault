@@ -66,7 +66,7 @@ body:has([data-theme="light"]) { background-color: #F5F2EB; color: #1a1a1a; }
     position: relative;
 }
 .content-area.notes-mode {
-    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
 }
 
 /* Elegant Top Loader */
@@ -337,10 +337,12 @@ body:has([data-theme="light"]) { background-color: #F5F2EB; color: #1a1a1a; }
     height: 100%;
     display: flex;
     flex: 1;
+    min-height: calc(100% - 4px);
 }
 .notes-sheet {
     flex: 1;
     min-height: 100%;
+    height: 100%;
     border: 1px solid var(--border);
     border-radius: 30px;
     background:
@@ -445,48 +447,6 @@ body:has([data-theme="light"]) { background-color: #F5F2EB; color: #1a1a1a; }
     text-decoration: underline;
     text-decoration-thickness: 1.5px;
     text-underline-offset: 4px;
-}
-.notes-song-overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 1200;
-    background: rgba(0, 0, 0, 0.38);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px 16px calc(98px + env(safe-area-inset-bottom));
-}
-.notes-song-preview {
-    width: 100%;
-    max-width: 980px;
-    height: min(78vh, 760px);
-    border-radius: 28px;
-    border: 1px solid var(--border);
-    background: rgba(11, 13, 16, 0.96);
-    backdrop-filter: blur(18px);
-    box-shadow: 0 20px 60px rgba(0,0,0,0.45);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-.notes-song-preview-header {
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    align-items: flex-start;
-    padding: 16px 16px 12px;
-    border-bottom: 1px solid var(--border);
-}
-.notes-song-preview-header h3 {
-    margin-top: 6px;
-    font-size: 20px;
-}
-.notes-song-preview-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 18px 18px 28px;
 }
 .notes-editor::placeholder {
     color: var(--text-dim);
@@ -685,31 +645,90 @@ body:has([data-theme="light"]) { background-color: #F5F2EB; color: #1a1a1a; }
 /* PIN Lock Screen */
 .pin-overlay {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.985); z-index: 90;
+    background:
+        radial-gradient(circle at top left, rgba(0, 122, 255, 0.18), transparent 28%),
+        radial-gradient(circle at top right, rgba(255, 194, 92, 0.08), transparent 20%),
+        rgba(0, 0, 0, 0.92);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    z-index: 90;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     animation: fadeIn 0.3s ease;
 }
-.pin-container { width: 100%; max-width: 280px; text-align: center; }
+.pin-container {
+    width: calc(100% - 40px);
+    max-width: 340px;
+    text-align: center;
+    padding: 28px 22px 24px;
+    border-radius: 32px;
+    border: 1px solid var(--border);
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)),
+        rgba(18, 18, 20, 0.88);
+    box-shadow: 0 24px 80px rgba(0,0,0,0.42);
+}
 .pin-header { margin-bottom: 26px; }
+.pin-badge-row {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.pin-badge {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.pin-badge.is-accent {
+    background: rgba(0, 122, 255, 0.14);
+    color: #7cb5ff;
+}
+.pin-title {
+    font-size: 28px;
+    font-weight: 750;
+    letter-spacing: -0.03em;
+    margin-bottom: 8px;
+}
+.pin-subtitle {
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1.45;
+}
 .pin-dots { display: flex; justify-content: center; gap: 14px; margin-bottom: 34px; }
 .pin-dot {
-    width: 12px; height: 12px; border: 1.5px solid var(--border); border-radius: 50%;
+    width: 12px; height: 12px; border: 1.5px solid var(--border); border-radius: 999px;
     transition: all 0.2s;
+    background: rgba(255,255,255,0.03);
 }
-.pin-dot.active { background: var(--text); border-color: var(--text); transform: scale(1.1); }
+.pin-dot.active { background: var(--accent); border-color: var(--accent); transform: scale(1.12); box-shadow: 0 0 0 5px rgba(0,122,255,0.12); }
 .pin-dot.error { background: #FF453A; border-color: #FF453A; }
 
 .pin-keypad {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 18px;
-    padding: 0 12px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 12px;
+    padding: 0 8px;
 }
 .pin-key {
-    width: 64px; height: 64px; margin: 0 auto; border-radius: 50%; background: var(--glass);
+    width: 62px; height: 62px; margin: 0 auto; border-radius: 999px; background: rgba(255,255,255,0.08);
     border: 1px solid var(--border); color: var(--text); font-size: 24px;
     font-weight: 500; display: flex; align-items: center; justify-content: center;
     cursor: pointer; transition: all 0.15s;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 10px 24px rgba(0,0,0,0.16);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
 }
-.pin-key:active { background: rgba(255,255,255,0.2); transform: scale(0.92); }
+.pin-key:active { background: rgba(255,255,255,0.16); transform: scale(0.95); }
 .pin-key.empty { background: transparent; border: none; cursor: default; }
 .pin-key.delete { background: transparent; border: none; font-size: 18px; color: var(--text-dim); }
 .pin-key.delete:active { opacity: 0.5; transform: scale(0.9); }
+.pin-key-symbol {
+    font-size: 24px;
+    line-height: 1;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Library, Search as SearchIcon, Database as DbIcon, Edit2, Trash2, GripVertical, Sun, Moon, Music2, Check, Bold, Palette, Heading2, ListTodo, Link2, X } from 'lucide-react';
+import { Library, Search as SearchIcon, Database as DbIcon, Edit2, Trash2, GripVertical, Sun, Moon, Music2, Check, Bold, Palette, Heading2, ListTodo, Link2 } from 'lucide-react';
 import SongCard from './components/SongCard';
 import ScaleCard from './components/ScaleCard';
 import SongModal from './components/SongModal';
@@ -248,7 +248,6 @@ function App() {
   const [pendingScaleId, setPendingScaleId] = useState(null);
   const [notesContent, setNotesContent] = useState(normalizeNotesHtml(localStorage.getItem('notes_content') || ''));
   const [isEditingNotes, setIsEditingNotes] = useState(false);
-  const [notesPreviewSong, setNotesPreviewSong] = useState(null);
   const [savingNotes, setSavingNotes] = useState(false);
   const audioRef = useRef(null);
   const notesEditorRef = useRef(null);
@@ -335,7 +334,6 @@ function App() {
   useEffect(() => {
     if (activeTab !== 'notes') {
       setIsEditingNotes(false);
-      setNotesPreviewSong(null);
       notesEditorRef.current?.blur();
     }
   }, [activeTab]);
@@ -362,18 +360,6 @@ function App() {
       notesEditorRef.current.innerHTML = normalizeNotesHtml(notesContent);
     }
   }, [notesContent, isEditingNotes]);
-
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-
-    if (notesPreviewSong) {
-      document.body.style.overflow = 'hidden';
-    }
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [notesPreviewSong]);
 
   // Save: update songs.json on GitHub directly
   const handleSaveSong = async (data) => {
@@ -516,13 +502,14 @@ function App() {
 
   const dockActiveTab = pinTarget === 'database' || pinTarget === 'database-add'
     ? 'database'
+    : pinTarget === 'notes'
+      ? 'notes'
       : activeTab;
 
   const handleNotesDone = () => {
     const nextNotes = extractNotesHtml(notesEditorRef.current);
     setNotesContent(nextNotes);
     setIsEditingNotes(false);
-    setNotesPreviewSong(null);
     notesEditorRef.current?.blur();
 
     if (!ghToken) return;
@@ -606,7 +593,7 @@ function App() {
       return;
     }
 
-    setNotesPreviewSong(song);
+    setSelectedSong(song);
   };
 
   const getNotesPreviewHtml = (html) => normalizeNotesHtml(html)
@@ -835,25 +822,6 @@ function App() {
         </div>
       </main>
 
-      {notesPreviewSong && (
-        <div className="notes-song-overlay" onClick={() => setNotesPreviewSong(null)}>
-          <div className="notes-song-preview" onClick={(e) => e.stopPropagation()}>
-            <div className="notes-song-preview-header">
-              <div>
-                <span className="song-card-scale">{notesPreviewSong.scale || 'Linked Song'}</span>
-                <h3>{notesPreviewSong.title}</h3>
-              </div>
-              <button type="button" className="modal-close-btn" onClick={() => setNotesPreviewSong(null)}>
-                <X size={18} />
-              </button>
-            </div>
-            <div className="notes-song-preview-body">
-              <pre className="lyrics-text" dangerouslySetInnerHTML={{ __html: notesPreviewSong.lyrics }} />
-            </div>
-          </div>
-        </div>
-      )}
-
       <nav className="floating-dock-container">
         <div className="floating-dock">
           <button className={`dock-item ${dockActiveTab === 'library' ? 'active' : ''}`} onClick={() => { setPinTarget(null); setActiveTab('library'); setShowAddForm(false); }}>
@@ -879,9 +847,13 @@ function App() {
           <button
             className={`dock-item ${dockActiveTab === 'notes' ? 'active' : ''}`}
             onClick={() => {
-              setPinTarget(null);
               setShowAddForm(false);
-              setActiveTab('notes');
+              if (isUnlocked) {
+                setPinTarget(null);
+                setActiveTab('notes');
+                return;
+              }
+              setPinTarget('notes');
             }}
           >
             <Edit2 size={20} />
@@ -938,9 +910,15 @@ function App() {
             setActiveTab('database');
             setEditingSong(null);
             setShowAddForm(true);
+          } else if (pinTarget === 'notes') {
+            setActiveTab('notes');
+            setShowAddForm(false);
           }
           setPinTarget(null);
-        }} />
+        }}
+          title={pinTarget === 'notes' ? 'Private Notes' : "Siddh's Lyrics"}
+          subtitle={pinTarget === 'notes' ? 'Unlock your notes' : 'Enter PIN'}
+        />
       )}
     </div>
   );
