@@ -16,7 +16,7 @@ const SongModal = ({ song, onClose, onScaleClick }) => {
   const [isClosing, setIsClosing] = useState(false);
 
   const dismissThreshold = useMemo(() => (
-    typeof window === 'undefined' ? 240 : window.innerHeight * 0.28
+    typeof window === 'undefined' ? 180 : window.innerHeight * 0.22
   ), []);
 
   useEffect(() => {
@@ -59,14 +59,14 @@ const SongModal = ({ song, onClose, onScaleClick }) => {
     const isAtTop = scrollTop <= 0 && pointerStateRef.current.startScrollTop <= 0;
 
     if (!pointerStateRef.current.draggingSheet) {
-      if (deltaY <= 0 || !isAtTop) return;
+      if (deltaY <= 4 || !isAtTop) return;
       pointerStateRef.current.draggingSheet = true;
       setIsDragging(true);
     }
 
     if (!pointerStateRef.current.draggingSheet) return;
 
-    const resistedOffset = Math.max(0, deltaY * 0.82);
+    const resistedOffset = Math.max(0, deltaY * 0.9);
     setSheetOffsetY(resistedOffset);
   };
 
@@ -95,7 +95,7 @@ const SongModal = ({ song, onClose, onScaleClick }) => {
         }}
         style={{
           transform: `translateY(${sheetOffsetY}px)`,
-          transition: isDragging ? 'none' : 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)'
+          transition: isDragging ? 'none' : 'transform 260ms cubic-bezier(0.175, 0.885, 0.32, 1.1)'
         }}
       >
         <div className="sheet-drag-handle-wrap">
