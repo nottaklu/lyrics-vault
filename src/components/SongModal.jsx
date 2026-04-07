@@ -122,7 +122,7 @@ const SongModal = ({ song, onClose, onScaleClick }) => {
           </button>
         </div>
         <div ref={bodyRef} className="modal-body lyrics-modal-body">
-          <pre className="lyrics-text" dangerouslySetInnerHTML={{ __html: song.lyrics }} />
+          <div className="lyrics-text" dangerouslySetInnerHTML={{ __html: song.lyrics || '' }} />
         </div>
       </div>
     </div>
