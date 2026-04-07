@@ -253,7 +253,6 @@ function App() {
   const audioRef = useRef(null);
   const notesEditorRef = useRef(null);
   const notesViewRef = useRef(null);
-  const contentAreaRef = useRef(null);
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
@@ -366,36 +365,6 @@ function App() {
       notesEditorRef.current.innerHTML = normalizeNotesHtml(notesContent);
     }
   }, [notesContent, isEditingNotes]);
-
-  useEffect(() => {
-    const scroller = contentAreaRef.current;
-    if (!scroller) return;
-
-    let startY = 0;
-
-    const onTouchStart = (event) => {
-      startY = event.touches[0]?.clientY || 0;
-    };
-
-    const onTouchMove = (event) => {
-      const currentY = event.touches[0]?.clientY || 0;
-      const deltaY = currentY - startY;
-      const atTop = scroller.scrollTop <= 0;
-      const atBottom = Math.ceil(scroller.scrollTop + scroller.clientHeight) >= scroller.scrollHeight;
-
-      if ((atTop && deltaY > 0) || (atBottom && deltaY < 0)) {
-        event.preventDefault();
-      }
-    };
-
-    scroller.addEventListener('touchstart', onTouchStart, { passive: true });
-    scroller.addEventListener('touchmove', onTouchMove, { passive: false });
-
-    return () => {
-      scroller.removeEventListener('touchstart', onTouchStart);
-      scroller.removeEventListener('touchmove', onTouchMove);
-    };
-  }, [activeTab]);
 
   // Save: update songs.json on GitHub directly
   const handleSaveSong = async (data) => {
@@ -696,7 +665,7 @@ function App() {
 
   return (
     <div className="app-container" data-theme={theme}>
-      <main ref={contentAreaRef} className={`content-area ${activeTab === 'notes' ? 'notes-mode' : ''}`}>
+      <main className={`content-area ${activeTab === 'notes' ? 'notes-mode' : ''} ${selectedSong ? 'is-modal-open' : ''}`}>
         {(loading || savingNotes) && <div className="top-loader-bar"></div>}
         <header className="app-header">
           <div className="header-copy">

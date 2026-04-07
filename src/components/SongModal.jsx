@@ -33,6 +33,16 @@ const SongModal = ({ song, onClose, onScaleClick }) => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isClosing) return undefined;
+    const timer = window.setTimeout(() => {
+      onClose();
+    }, 280);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [isClosing, onClose]);
+
   const resetSheetPosition = () => {
     setIsDragging(false);
     setSheetOffsetY(0);
@@ -45,7 +55,7 @@ const SongModal = ({ song, onClose, onScaleClick }) => {
     if (isClosing) return;
     setIsDragging(false);
     setIsClosing(true);
-    setSheetOffsetY(window.innerHeight * 0.38);
+    setSheetOffsetY(window.innerHeight);
   };
 
   const handlePointerDown = (event) => {
@@ -142,9 +152,6 @@ const SongModal = ({ song, onClose, onScaleClick }) => {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
-        onTransitionEnd={() => {
-          if (isClosing) onClose();
-        }}
         style={{
           transform: `translateY(${sheetOffsetY}px)`,
           transition: isDragging ? 'none' : 'transform 260ms cubic-bezier(0.175, 0.885, 0.32, 1.1)'
