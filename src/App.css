@@ -43,7 +43,7 @@
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
-body { background: var(--bg-glow); color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; min-height: 100vh; min-height: 100dvh; display: flex; justify-content: center; align-items: stretch; overflow: hidden; }
+body { background: var(--bg-glow); color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; min-height: 100vh; min-height: 100dvh; display: flex; justify-content: center; align-items: stretch; overflow: hidden; overscroll-behavior-y: none; }
 body:has([data-theme="light"]) { background-color: #F5F2EB; color: #1a1a1a; }
 
 .app-container {
@@ -72,6 +72,8 @@ body:has([data-theme="light"]) { background-color: #F5F2EB; color: #1a1a1a; }
     flex: 1; padding: 10px 20px calc(90px + env(safe-area-inset-bottom)); overflow-y: auto; overflow-x: hidden; scrollbar-width: none;
     min-height: 0; /* critical for flex scroll */
     position: relative;
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: touch;
 }
 .content-area.notes-mode {
     padding-bottom: 0;
@@ -544,12 +546,12 @@ body:has([data-theme="light"]) { background-color: #F5F2EB; color: #1a1a1a; }
 }
 .modal-header { padding: 22px 24px 20px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 16px; }
 .modal-close-btn { background: var(--glass); border: none; color: var(--text); width: 40px; height: 40px; border-radius: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-.modal-body { flex: 1; padding: 30px 24px; overflow-y: auto; overflow-x: hidden; }
+.modal-body { flex: 1; padding: 30px 24px; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: none; }
 .lyrics-modal-body {
     flex: 1;
     min-height: 0;
     padding: 26px 24px calc(42px + env(safe-area-inset-bottom));
-    overscroll-behavior: contain;
+    overscroll-behavior-y: none;
     -webkit-overflow-scrolling: touch;
 }
 .modal-scale-link {

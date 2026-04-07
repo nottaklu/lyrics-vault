@@ -45,6 +45,7 @@ const SongModal = ({ song, onClose, onScaleClick }) => {
   const handlePointerDown = (event) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
 
+    event.currentTarget.setPointerCapture?.(event.pointerId);
     pointerStateRef.current.pointerId = event.pointerId;
     pointerStateRef.current.startY = event.clientY;
     pointerStateRef.current.startScrollTop = bodyRef.current?.scrollTop || 0;
@@ -66,12 +67,15 @@ const SongModal = ({ song, onClose, onScaleClick }) => {
 
     if (!pointerStateRef.current.draggingSheet) return;
 
+    event.preventDefault();
     const resistedOffset = Math.max(0, deltaY * 0.9);
     setSheetOffsetY(resistedOffset);
   };
 
   const handlePointerUp = (event) => {
     if (pointerStateRef.current.pointerId !== event.pointerId) return;
+
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
 
     if (pointerStateRef.current.draggingSheet && sheetOffsetY > dismissThreshold) {
       requestClose();
