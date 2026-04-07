@@ -11,12 +11,17 @@ const SongModal = ({ song, onClose, onScaleClick }) => {
     startScrollTop: 0,
     draggingSheet: false
   });
+  const touchStateRef = useRef({
+    startY: 0,
+    startScrollTop: 0,
+    draggingSheet: false
+  });
   const [sheetOffsetY, setSheetOffsetY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
 
   const dismissThreshold = useMemo(() => (
-    typeof window === 'undefined' ? 180 : window.innerHeight * 0.22
+    typeof window === 'undefined' ? 160 : window.innerHeight * 0.16
   ), []);
 
   useEffect(() => {
@@ -33,6 +38,7 @@ const SongModal = ({ song, onClose, onScaleClick }) => {
     setSheetOffsetY(0);
     pointerStateRef.current.draggingSheet = false;
     pointerStateRef.current.pointerId = null;
+    touchStateRef.current.draggingSheet = false;
   };
 
   const requestClose = () => {
@@ -85,6 +91,44 @@ const SongModal = ({ song, onClose, onScaleClick }) => {
     resetSheetPosition();
   };
 
+  const handleTouchStart = (event) => {
+    const touch = event.touches[0];
+    touchStateRef.current.startY = touch?.clientY || 0;
+    touchStateRef.current.startScrollTop = bodyRef.current?.scrollTop || 0;
+    touchStateRef.current.draggingSheet = false;
+  };
+
+  const handleTouchMove = (event) => {
+    const touch = event.touches[0];
+    const currentY = touch?.clientY || 0;
+    const deltaY = currentY - touchStateRef.current.startY;
+    const scrollTop = bodyRef.current?.scrollTop || 0;
+    const isAtTop = scrollTop <= 0 && touchStateRef.current.startScrollTop <= 0;
+
+    if ((scrollTop <= 0 && deltaY > 0) || (scrollTop + (bodyRef.current?.clientHeight || 0) >= (bodyRef.current?.scrollHeight || 0) && deltaY < 0)) {
+      event.preventDefault();
+    }
+
+    if (!touchStateRef.current.draggingSheet) {
+      if (deltaY <= 4 || !isAtTop) return;
+      touchStateRef.current.draggingSheet = true;
+      setIsDragging(true);
+    }
+
+    if (!touchStateRef.current.draggingSheet) return;
+
+    event.preventDefault();
+    setSheetOffsetY(Math.max(0, deltaY * 0.9));
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStateRef.current.draggingSheet && sheetOffsetY > dismissThreshold) {
+      requestClose();
+      return;
+    }
+    resetSheetPosition();
+  };
+
   return (
     <div className={`modal-overlay ${isClosing ? 'is-closing' : ''}`} onClick={requestClose}>
       <div
@@ -94,6 +138,10 @@ const SongModal = ({ song, onClose, onScaleClick }) => {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
         onTransitionEnd={() => {
           if (isClosing) onClose();
         }}

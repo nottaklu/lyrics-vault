@@ -28,7 +28,6 @@
     --modal-bg: #F5F2EB;
     --card-shadow: 0 2px 12px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06);
 }
-[data-theme="light"] * { color: inherit; }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideInUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
@@ -576,8 +575,17 @@ body:has([data-theme="light"]) { background-color: #F5F2EB; color: #1a1a1a; }
 .lyrics-text font[color="#007AFF"],
 .lyrics-text font[color="#007aff"],
 .lyrics-text span[style*="rgb(0, 122, 255)"],
-.lyrics-text span[style*="rgb(0,122,255)"] {
+.lyrics-text span[style*="rgb(0,122,255)"],
+.lyrics-text span[style*="rgba(0, 122, 255"],
+.lyrics-text span[style*="rgba(0,122,255"] {
     color: #007AFF !important;
+}
+.lyrics-text span[style*="font-weight"],
+.lyrics-text span[style*="font-weight:700"],
+.lyrics-text span[style*="font-weight: 700"],
+.lyrics-text span[style*="font-weight:bold"],
+.lyrics-text span[style*="font-weight: bold"] {
+    font-weight: 700;
 }
 [data-theme="light"] .lyrics-text { color: #333; }
 

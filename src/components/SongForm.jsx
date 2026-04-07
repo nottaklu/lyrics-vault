@@ -1,15 +1,75 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Save, Bold, Palette, Plus } from 'lucide-react';
 
-const normalizeLyricsHtml = (value) => String(value || '')
-  .replace(/color:\s*(?!#007aff|#007AFF|rgb\(0,\s*122,\s*255\)|rgba\(0,\s*122,\s*255,\s*1\))[^;"']+;?/gi, '');
-
 const escapeHtml = (value) => String(value || '')
   .replace(/&/g, '&amp;')
   .replace(/</g, '&lt;')
   .replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#39;');
+
+const isBlueColor = (rawColor) => {
+  const value = String(rawColor || '').replace(/\s+/g, '').toLowerCase();
+  return value === '#007aff'
+    || value === 'rgb(0,122,255)'
+    || value === 'rgba(0,122,255,1)';
+};
+
+const serializeLyricsNode = (node) => {
+  if (!node) return '';
+
+  if (node.nodeType === Node.TEXT_NODE) {
+    return escapeHtml(node.textContent || '');
+  }
+
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return '';
+  }
+
+  const element = node;
+  const tagName = element.tagName.toUpperCase();
+  const childrenHtml = Array.from(element.childNodes).map(serializeLyricsNode).join('');
+
+  if (tagName === 'BR') return '<br>';
+  if (tagName === 'STRONG' || tagName === 'B') return `<strong>${childrenHtml}</strong>`;
+  if (tagName === 'DIV' || tagName === 'P') return `${childrenHtml || '<br>'}<br>`;
+
+  const color = (element.style?.color || '').replace(/\s+/g, '').toLowerCase();
+  const fontWeight = (element.style?.fontWeight || '').toLowerCase();
+  const isBold = fontWeight === 'bold' || Number(fontWeight) >= 600;
+
+  let wrapped = childrenHtml;
+  if (isBold && wrapped.trim()) {
+    wrapped = `<strong>${wrapped}</strong>`;
+  }
+  if (isBlueColor(color) && wrapped.trim()) {
+    wrapped = `<span style="color:#007AFF">${wrapped}</span>`;
+  }
+
+  return wrapped;
+};
+
+const normalizeLyricsHtml = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  const hasHtml = /<[a-z][\s\S]*>/i.test(raw);
+  if (!hasHtml) {
+    return escapeHtml(raw).replace(/\r\n/g, '\n').replace(/\n/g, '<br>');
+  }
+
+  if (typeof document === 'undefined') {
+    return raw;
+  }
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(raw, 'text/html');
+  return Array.from(doc.body.childNodes)
+    .map(serializeLyricsNode)
+    .join('')
+    .replace(/(<br>\s*){3,}/gi, '<br><br>')
+    .replace(/(<br>\s*)+$/gi, '');
+};
 
 const DEFAULT_TAGS = [
   'Fast',
