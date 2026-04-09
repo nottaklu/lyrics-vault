@@ -229,5 +229,15 @@
     "id": 1775724907276,
     "order": 18,
     "createdAt": "2026-04-09T08:55:07.276Z"
+  },
+  {
+    "title": "Stuti",
+    "scale": "D Sharp Major",
+    "chords": "Capo 3 ",
+    "keywords": [],
+    "lyrics": "C - em - C - (F^)C<br>C - em - C - (F^)C<br>Am - F - Em - C <br>C - Am - C - (F^)C",
+    "id": 1775725003846,
+    "order": 19,
+    "createdAt": "2026-04-09T08:56:43.846Z"
   }
 ]
