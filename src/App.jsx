@@ -896,6 +896,7 @@ function App() {
 
       {selectedSong && (
         <SongModal
+          key={selectedSong.id}
           songs={modalSongList}
           initialSongId={selectedSong.id}
           onClose={() => setSelectedSong(null)}
