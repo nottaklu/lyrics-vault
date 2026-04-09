@@ -513,22 +513,6 @@ function App() {
 
   const sortedSongs = [...songs].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   const modalSongList = activeTab === 'library' ? filtered : sortedSongs;
-  const selectedSongIndex = selectedSong
-    ? modalSongList.findIndex((song) => song.id === selectedSong.id)
-    : -1;
-  const hasPrevSong = selectedSongIndex > 0;
-  const hasNextSong = selectedSongIndex >= 0 && selectedSongIndex < modalSongList.length - 1;
-
-  const showPrevSong = () => {
-    if (!hasPrevSong) return;
-    setSelectedSong(modalSongList[selectedSongIndex - 1]);
-  };
-
-  const showNextSong = () => {
-    if (!hasNextSong) return;
-    setSelectedSong(modalSongList[selectedSongIndex + 1]);
-  };
-
   const handleNotesDone = () => {
     const nextNotes = extractNotesHtml(notesEditorRef.current);
     setNotesContent(nextNotes);
@@ -912,13 +896,10 @@ function App() {
 
       {selectedSong && (
         <SongModal
-          song={selectedSong}
+          songs={modalSongList}
+          initialSongId={selectedSong.id}
           onClose={() => setSelectedSong(null)}
           onScaleClick={handleSongScaleClick}
-          onPrevSong={showPrevSong}
-          onNextSong={showNextSong}
-          hasPrevSong={hasPrevSong}
-          hasNextSong={hasNextSong}
         />
       )}
 

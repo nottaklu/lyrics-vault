@@ -1,43 +1,98 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
-const SongModal = ({
+const SongPane = React.memo(({
   song,
-  onClose,
+  active,
   onScaleClick,
-  onNextSong,
+  onClose,
   onPrevSong,
-  hasNextSong = false,
-  hasPrevSong = false
-}) => {
-  if (!song) return null;
+  onNextSong,
+  hasPrevSong,
+  hasNextSong,
+  bodyRef
+}) => (
+  <div className="lyrics-page">
+    <div className="modal-header">
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          {song?.scale && (
+            <button
+              type="button"
+              className="modal-scale-link"
+              onClick={() => active && onScaleClick?.(song.scale)}
+              disabled={!active}
+            >
+              {song.scale}
+            </button>
+          )}
+          {song?.chords && <span style={{ fontSize: '12px', color: 'var(--text-dim)', fontWeight: '500' }}>{song.chords}</span>}
+        </div>
+        <h2 style={{ marginTop: '4px', fontSize: '24px' }}>{song?.title || ''}</h2>
+      </div>
+      {active ? (
+        <div className="modal-header-actions">
+          <button className="modal-close-btn" onClick={onClose} aria-label="Close lyrics sheet">
+            <X size={20} />
+          </button>
+          <div className="modal-nav-buttons">
+            <button
+              type="button"
+              className="modal-nav-btn"
+              onClick={onPrevSong}
+              disabled={!hasPrevSong}
+              aria-label="Previous song"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              type="button"
+              className="modal-nav-btn"
+              onClick={onNextSong}
+              disabled={!hasNextSong}
+              aria-label="Next song"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
+      ) : <div className="modal-header-actions ghost" />}
+    </div>
 
+    <div ref={active ? bodyRef : null} className="modal-body lyrics-modal-body">
+      <div className="lyrics-text" dangerouslySetInnerHTML={{ __html: song?.lyrics || '' }} />
+    </div>
+  </div>
+));
+
+const SongModal = ({ songs = [], initialSongId, onClose, onScaleClick }) => {
   const bodyRef = useRef(null);
-  const dragStateRef = useRef({
+  const pagerRef = useRef(null);
+  const closeDragRef = useRef({
     pointerId: null,
-    startX: 0,
     startY: 0,
     startScrollTop: 0,
-    mode: null
+    dragging: false
   });
+
+  const initialIndex = Math.max(0, songs.findIndex((s) => s.id === initialSongId));
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [sheetOffsetY, setSheetOffsetY] = useState(0);
-  const [sheetOffsetX, setSheetOffsetX] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
+  const [isDraggingClose, setIsDraggingClose] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-  const [slideDirection, setSlideDirection] = useState(null);
-  const [frameKey, setFrameKey] = useState(0);
 
   const dismissThreshold = useMemo(() => (
     typeof window === 'undefined' ? 160 : window.innerHeight * 0.16
   ), []);
-  const horizontalThreshold = useMemo(() => (
-    typeof window === 'undefined' ? 90 : window.innerWidth * 0.18
-  ), []);
+
+  useEffect(() => {
+    const nextIndex = songs.findIndex((s) => s.id === initialSongId);
+    if (nextIndex >= 0) setCurrentIndex(nextIndex);
+  }, [initialSongId, songs]);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-
     return () => {
       document.body.style.overflow = previousOverflow;
     };
@@ -45,181 +100,127 @@ const SongModal = ({
 
   useEffect(() => {
     if (!isClosing) return undefined;
-    const timer = window.setTimeout(() => {
-      onClose();
-    }, 280);
-    return () => {
-      window.clearTimeout(timer);
-    };
+    const timer = window.setTimeout(() => onClose(), 240);
+    return () => window.clearTimeout(timer);
   }, [isClosing, onClose]);
 
-  useEffect(() => {
-    setSheetOffsetX(0);
-    setSheetOffsetY(0);
-    setIsDragging(false);
-    setIsClosing(false);
-  }, [song.id]);
-
-  const resetSheetPosition = () => {
-    setIsDragging(false);
-    setSheetOffsetX(0);
-    setSheetOffsetY(0);
-    dragStateRef.current.pointerId = null;
-    dragStateRef.current.mode = null;
-  };
+  useLayoutEffect(() => {
+    const pager = pagerRef.current;
+    if (!pager) return;
+    const width = pager.clientWidth || window.innerWidth || 1;
+    pager.scrollTo({ left: currentIndex * width, behavior: 'auto' });
+    if (bodyRef.current) bodyRef.current.scrollTop = 0;
+  }, [currentIndex]);
 
   const requestClose = () => {
     if (isClosing) return;
-    setIsDragging(false);
+    setIsDraggingClose(false);
     setIsClosing(true);
     setSheetOffsetY(window.innerHeight);
+  };
+
+  const resetCloseDrag = () => {
+    closeDragRef.current.pointerId = null;
+    closeDragRef.current.dragging = false;
+    setIsDraggingClose(false);
+    setSheetOffsetY(0);
+  };
+
+  const goToIndex = (nextIndex) => {
+    const clamped = Math.max(0, Math.min(songs.length - 1, nextIndex));
+    const pager = pagerRef.current;
+    if (!pager) {
+      setCurrentIndex(clamped);
+      return;
+    }
+    const width = pager.clientWidth || window.innerWidth || 1;
+    pager.scrollTo({ left: clamped * width, behavior: 'smooth' });
+    setCurrentIndex(clamped);
+  };
+
+  const goPrev = () => goToIndex(currentIndex - 1);
+  const goNext = () => goToIndex(currentIndex + 1);
+
+  const handlePagerScroll = () => {
+    const pager = pagerRef.current;
+    if (!pager) return;
+    const width = pager.clientWidth || window.innerWidth || 1;
+    const nextIndex = Math.round(pager.scrollLeft / width);
+    if (nextIndex !== currentIndex) setCurrentIndex(nextIndex);
   };
 
   const handlePointerDown = (event) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
     if (event.target instanceof Element && event.target.closest('button, a, input, textarea, select')) return;
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-    dragStateRef.current.pointerId = event.pointerId;
-    dragStateRef.current.startX = event.clientX;
-    dragStateRef.current.startY = event.clientY;
-    dragStateRef.current.startScrollTop = bodyRef.current?.scrollTop || 0;
-    dragStateRef.current.mode = null;
+
+    closeDragRef.current.pointerId = event.pointerId;
+    closeDragRef.current.startY = event.clientY;
+    closeDragRef.current.startScrollTop = bodyRef.current?.scrollTop || 0;
+    closeDragRef.current.dragging = false;
   };
 
   const handlePointerMove = (event) => {
-    if (dragStateRef.current.pointerId !== event.pointerId) return;
-    const deltaX = event.clientX - dragStateRef.current.startX;
-    const deltaY = event.clientY - dragStateRef.current.startY;
-    const absX = Math.abs(deltaX);
-    const absY = Math.abs(deltaY);
+    if (closeDragRef.current.pointerId !== event.pointerId) return;
+    const deltaY = event.clientY - closeDragRef.current.startY;
     const scrollTop = bodyRef.current?.scrollTop || 0;
-    const isAtTop = scrollTop <= 0 && dragStateRef.current.startScrollTop <= 0;
+    const isAtTop = scrollTop <= 0 && closeDragRef.current.startScrollTop <= 0;
 
-    if (!dragStateRef.current.mode) {
-      if (absX < 8 && absY < 8) return;
-
-      if (absX > absY * 1.15) {
-        dragStateRef.current.mode = 'x';
-        setIsDragging(true);
-      } else if (deltaY > 0 && isAtTop && absY > absX * 1.05) {
-        dragStateRef.current.mode = 'y';
-        setIsDragging(true);
-      } else {
-        return;
-      }
+    if (!closeDragRef.current.dragging) {
+      if (deltaY <= 6 || !isAtTop) return;
+      closeDragRef.current.dragging = true;
+      setIsDraggingClose(true);
     }
 
-    if (dragStateRef.current.mode === 'x') {
-      event.preventDefault();
-      const resisted = Math.sign(deltaX) * Math.min(Math.abs(deltaX) * 0.92, window.innerWidth * 0.82);
-      setSheetOffsetX(resisted);
-      return;
-    }
-
-    if (dragStateRef.current.mode === 'y') {
-      event.preventDefault();
-      const resistedOffset = Math.max(0, deltaY * 0.92);
-      setSheetOffsetY(resistedOffset);
-    }
+    if (!closeDragRef.current.dragging) return;
+    event.preventDefault();
+    setSheetOffsetY(Math.max(0, deltaY * 0.92));
   };
 
   const handlePointerUp = (event) => {
-    if (dragStateRef.current.pointerId !== event.pointerId) return;
-
-    event.currentTarget.releasePointerCapture?.(event.pointerId);
-
-    if (dragStateRef.current.mode === 'y') {
-      if (sheetOffsetY > dismissThreshold) {
-        requestClose();
-        return;
-      }
-      resetSheetPosition();
+    if (closeDragRef.current.pointerId !== event.pointerId) return;
+    if (closeDragRef.current.dragging && sheetOffsetY > dismissThreshold) {
+      requestClose();
       return;
     }
-
-    if (dragStateRef.current.mode === 'x') {
-      if (sheetOffsetX < -horizontalThreshold && hasNextSong) {
-        setSlideDirection('next');
-        setFrameKey((current) => current + 1);
-        onNextSong?.();
-      } else if (sheetOffsetX > horizontalThreshold && hasPrevSong) {
-        setSlideDirection('prev');
-        setFrameKey((current) => current + 1);
-        onPrevSong?.();
-      }
-      window.setTimeout(() => setSlideDirection(null), 320);
-      resetSheetPosition();
-      return;
-    }
-
-    resetSheetPosition();
+    resetCloseDrag();
   };
+
+  if (!songs.length) return null;
 
   return (
     <div className={`modal-overlay ${isClosing ? 'is-closing' : ''}`} onClick={requestClose}>
       <div
-        className={`modal-content lyrics-sheet ${isDragging ? 'is-dragging' : ''} ${isClosing ? 'is-closing' : ''}`}
-        onClick={e => e.stopPropagation()}
+        className={`modal-content lyrics-sheet ${isDraggingClose ? 'is-dragging' : ''} ${isClosing ? 'is-closing' : ''}`}
+        onClick={(e) => e.stopPropagation()}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         style={{
-          transform: `translate3d(${sheetOffsetX}px, ${sheetOffsetY}px, 0)`,
-          transition: isDragging ? 'none' : 'transform 360ms cubic-bezier(0.22, 1, 0.36, 1)'
+          transform: `translate3d(0, ${sheetOffsetY}px, 0)`,
+          transition: isDraggingClose ? 'none' : 'transform 320ms cubic-bezier(0.22, 1, 0.36, 1)'
         }}
       >
         <div className="sheet-drag-handle-wrap">
           <div className="sheet-drag-handle" />
         </div>
-        <div key={`${song.id}-${frameKey}`} className={`lyrics-song-frame ${slideDirection ? `is-sliding-${slideDirection}` : ''}`}>
-          <div className="modal-header">
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                {song.scale && (
-                  <button
-                    type="button"
-                    className="modal-scale-link"
-                    onClick={() => onScaleClick?.(song.scale)}
-                  >
-                    {song.scale}
-                  </button>
-                )}
-                {song.chords && <span style={{ fontSize: '12px', color: 'var(--text-dim)', fontWeight: '500' }}>{song.chords}</span>}
-              </div>
-              <h2 style={{ marginTop: '4px', fontSize: '24px' }}>{song.title}</h2>
+
+        <div ref={pagerRef} className="lyrics-pager" onScroll={handlePagerScroll}>
+          {songs.map((song, index) => (
+            <div key={song.id} className="lyrics-page-wrap">
+              <SongPane
+                song={song}
+                active={index === currentIndex}
+                onScaleClick={onScaleClick}
+                onClose={requestClose}
+                onPrevSong={goPrev}
+                onNextSong={goNext}
+                hasPrevSong={currentIndex > 0}
+                hasNextSong={currentIndex < songs.length - 1}
+                bodyRef={bodyRef}
+              />
             </div>
-            <div className="modal-header-actions">
-              <button className="modal-close-btn" onClick={requestClose} aria-label="Close lyrics sheet">
-                <X size={20} />
-              </button>
-              <div className="modal-nav-buttons">
-                <button
-                  type="button"
-                  className="modal-nav-btn"
-                  data-no-swipe="true"
-                  onClick={onPrevSong}
-                  disabled={!hasPrevSong}
-                  aria-label="Previous song"
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <button
-                  type="button"
-                  className="modal-nav-btn"
-                  data-no-swipe="true"
-                  onClick={onNextSong}
-                  disabled={!hasNextSong}
-                  aria-label="Next song"
-                >
-                  <ChevronRight size={18} />
-                </button>
-              </div>
-            </div>
-          </div>
-          <div ref={bodyRef} className="modal-body lyrics-modal-body">
-            <div className="lyrics-text" dangerouslySetInnerHTML={{ __html: song.lyrics || '' }} />
-          </div>
+          ))}
         </div>
       </div>
     </div>
