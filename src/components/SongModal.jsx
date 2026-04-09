@@ -68,6 +68,8 @@ const SongPane = React.memo(({
 const SongModal = ({ songs = [], initialSongId, onClose, onScaleClick }) => {
   const bodyRef = useRef(null);
   const pagerRef = useRef(null);
+  const scrollEndTimerRef = useRef(null);
+  const suppressScrollCommitRef = useRef(false);
   const closeDragRef = useRef({
     pointerId: null,
     startY: 0,
@@ -76,7 +78,7 @@ const SongModal = ({ songs = [], initialSongId, onClose, onScaleClick }) => {
   });
 
   const initialIndex = Math.max(0, songs.findIndex((s) => s.id === initialSongId));
-  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [settledIndex, setSettledIndex] = useState(initialIndex);
   const [sheetOffsetY, setSheetOffsetY] = useState(0);
   const [isDraggingClose, setIsDraggingClose] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -87,7 +89,7 @@ const SongModal = ({ songs = [], initialSongId, onClose, onScaleClick }) => {
 
   useEffect(() => {
     const nextIndex = songs.findIndex((s) => s.id === initialSongId);
-    if (nextIndex >= 0) setCurrentIndex(nextIndex);
+    if (nextIndex >= 0) setSettledIndex(nextIndex);
   }, [initialSongId, songs]);
 
   useEffect(() => {
@@ -104,13 +106,22 @@ const SongModal = ({ songs = [], initialSongId, onClose, onScaleClick }) => {
     return () => window.clearTimeout(timer);
   }, [isClosing, onClose]);
 
+  const windowStart = Math.max(0, settledIndex - 2);
+  const windowEnd = Math.min(songs.length - 1, settledIndex + 2);
+  const visibleSongs = songs.slice(windowStart, windowEnd + 1);
+  const localPageIndex = settledIndex - windowStart;
+
   useLayoutEffect(() => {
     const pager = pagerRef.current;
     if (!pager) return;
     const width = pager.clientWidth || window.innerWidth || 1;
-    pager.scrollTo({ left: currentIndex * width, behavior: 'auto' });
+    suppressScrollCommitRef.current = true;
+    pager.scrollTo({ left: localPageIndex * width, behavior: 'auto' });
+    window.setTimeout(() => {
+      suppressScrollCommitRef.current = false;
+    }, 0);
     if (bodyRef.current) bodyRef.current.scrollTop = 0;
-  }, [currentIndex]);
+  }, [localPageIndex, settledIndex]);
 
   const requestClose = () => {
     if (isClosing) return;
@@ -130,23 +141,41 @@ const SongModal = ({ songs = [], initialSongId, onClose, onScaleClick }) => {
     const clamped = Math.max(0, Math.min(songs.length - 1, nextIndex));
     const pager = pagerRef.current;
     if (!pager) {
-      setCurrentIndex(clamped);
+      setSettledIndex(clamped);
       return;
     }
     const width = pager.clientWidth || window.innerWidth || 1;
-    pager.scrollTo({ left: clamped * width, behavior: 'smooth' });
-    setCurrentIndex(clamped);
+    const localTarget = clamped - windowStart;
+    suppressScrollCommitRef.current = true;
+    pager.scrollTo({ left: localTarget * width, behavior: 'smooth' });
+    window.setTimeout(() => {
+      suppressScrollCommitRef.current = false;
+      commitScrollIndex();
+    }, 280);
   };
 
-  const goPrev = () => goToIndex(currentIndex - 1);
-  const goNext = () => goToIndex(currentIndex + 1);
-
-  const handlePagerScroll = () => {
+  const commitScrollIndex = () => {
     const pager = pagerRef.current;
     if (!pager) return;
     const width = pager.clientWidth || window.innerWidth || 1;
-    const nextIndex = Math.round(pager.scrollLeft / width);
-    if (nextIndex !== currentIndex) setCurrentIndex(nextIndex);
+    const localIndex = Math.round(pager.scrollLeft / width);
+    const nextGlobal = Math.max(0, Math.min(songs.length - 1, windowStart + localIndex));
+    if (nextGlobal !== settledIndex) {
+      setSettledIndex(nextGlobal);
+    }
+  };
+
+  const goPrev = () => goToIndex(settledIndex - 1);
+  const goNext = () => goToIndex(settledIndex + 1);
+
+  const handlePagerScroll = () => {
+    if (suppressScrollCommitRef.current) return;
+    if (scrollEndTimerRef.current) {
+      window.clearTimeout(scrollEndTimerRef.current);
+    }
+    scrollEndTimerRef.current = window.setTimeout(() => {
+      commitScrollIndex();
+    }, 90);
   };
 
   const handlePointerDown = (event) => {
@@ -183,6 +212,9 @@ const SongModal = ({ songs = [], initialSongId, onClose, onScaleClick }) => {
       return;
     }
     resetCloseDrag();
+    window.setTimeout(() => {
+      commitScrollIndex();
+    }, 20);
   };
 
   if (!songs.length) return null;
@@ -206,17 +238,17 @@ const SongModal = ({ songs = [], initialSongId, onClose, onScaleClick }) => {
         </div>
 
         <div ref={pagerRef} className="lyrics-pager" onScroll={handlePagerScroll}>
-          {songs.map((song, index) => (
+          {visibleSongs.map((song, index) => (
             <div key={song.id} className="lyrics-page-wrap">
               <SongPane
                 song={song}
-                active={index === currentIndex}
+                active={index === localPageIndex}
                 onScaleClick={onScaleClick}
                 onClose={requestClose}
                 onPrevSong={goPrev}
                 onNextSong={goNext}
-                hasPrevSong={currentIndex > 0}
-                hasNextSong={currentIndex < songs.length - 1}
+                hasPrevSong={settledIndex > 0}
+                hasNextSong={settledIndex < songs.length - 1}
                 bodyRef={bodyRef}
               />
             </div>
