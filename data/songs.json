@@ -239,5 +239,17 @@
     "id": 1775725003846,
     "order": 19,
     "createdAt": "2026-04-09T08:56:43.846Z"
+  },
+  {
+    "title": "Samu juvone",
+    "scale": "D minor",
+    "chords": "Capo 5",
+    "keywords": [
+      "Nemi"
+    ],
+    "lyrics": "Am - Em - F - emAm<br>Am - em - f - EmAm ami drashti thi maari<br><br>G G Em Em  x 2 nigod <br>Am Em F Em <br>Am - C x2 <br><br>Am - Em - F - emAm<br>Am - em - f - EmAm ami drashti thi maari",
+    "id": 1776497090952,
+    "order": 20,
+    "createdAt": "2026-04-18T07:24:50.952Z"
   }
 ]
